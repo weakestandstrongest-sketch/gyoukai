@@ -19,9 +19,12 @@ import zipfile
 PAGE = "https://www.jpx.co.jp/markets/statistics-equities/misc/01.html"
 UA = {"User-Agent": "Mozilla/5.0 (gyoukai-data-bot)"}
 EDINET_CODES = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip"
-# EDINET の所在地は都道府県が省かれていることが多いので、郵便番号データで市区町村→都道府県を引く
-KEN_ALL = "https://www.post.japanpost.jp/zipcode/dl/kogaki/zip/ken_all.zip"
-PREF_RE = re.compile(r"^(北海道|東京都|京都府|大阪府|.{2,3}?県)")
+# EDINET の所在地は都道府県が省かれていることが多いので、市区町村→都道府県の表（scripts/cities.json）で補う
+CITIES = pathlib.Path(__file__).resolve().parent / "cities.json"
+PREFS = ("北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 埼玉県 千葉県 東京都 神奈川県 新潟県 富山県 石川県 福井県 "
+         "山梨県 長野県 岐阜県 静岡県 愛知県 三重県 滋賀県 京都府 大阪府 兵庫県 奈良県 和歌山県 鳥取県 島根県 岡山県 広島県 山口県 "
+         "徳島県 香川県 愛媛県 高知県 福岡県 佐賀県 長崎県 熊本県 大分県 宮崎県 鹿児島県 沖縄県").split()
+PREF_RE = re.compile("^(" + "|".join(PREFS) + ")")
 OUT = pathlib.Path(__file__).resolve().parent.parent / "data" / "companies.js"
 
 MARKETS = {
@@ -74,22 +77,12 @@ CITY_TOWNS = {}   # (都道府県名, 市区町村名) → 町域名のリスト
 
 
 def load_city_table():
-    try:
-        with zipfile.ZipFile(io.BytesIO(get(KEN_ALL))) as z:
-            text = z.read(z.namelist()[0]).decode("cp932", "replace")
-    except Exception as e:
-        print("郵便番号データを取得できませんでした:", e)
-        return
-    for r in csv.reader(io.StringIO(text)):
-        if len(r) < 9:
-            continue
-        pref, city, town = r[6], r[7], re.sub(r"（.*", "", r[8])
-        prefs = CITY_PREFS.setdefault(city, [])
-        if pref not in prefs:
-            prefs.append(pref)
-        if town and "以下に掲載がない場合" not in town:
-            CITY_TOWNS.setdefault((pref, city), []).append(town)
-    print(f"郵便番号データ: {len(CITY_PREFS)} 市区町村")
+    data = json.loads(CITIES.read_text(encoding="utf-8"))
+    CITY_PREFS.update(data["cities"])
+    for key, towns in data["towns"].items():
+        pref, city = key.split("|")
+        CITY_TOWNS[(pref, city)] = towns
+    print(f"市区町村の表: {len(CITY_PREFS)} 件")
 
 
 def guess_pref(addr):
