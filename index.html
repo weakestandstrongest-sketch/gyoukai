@@ -175,8 +175,9 @@ textarea.input { resize: vertical; min-height: 96px; line-height: 1.6; }
 .home-title h1 { font-family: var(--font-display); font-weight: 900; font-size: clamp(44px, 13vw, 60px); line-height: .95; letter-spacing: -0.03em; margin: 0; }
 .home-title p { margin: 8px 0 0; font-weight: 700; font-size: 14px; }
 .home-title .date { font-family: var(--font-display); font-weight: 700; font-size: 13px; text-align: right; line-height: 1.3; padding-top: 6px; }
-.home-art { display: grid; place-items: center; min-height: 0; padding: 8px 0; }
-.home-art svg { width: 100%; height: 100%; max-height: 520px; }
+.home-art { display: grid; grid-template-rows: minmax(0, 1fr) auto; place-items: center; gap: 6px; min-height: 0; padding: 8px 0; }
+.home-art svg { width: 100%; height: 100%; max-height: 520px; min-height: 0; }
+.home-art .scene-cap { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--ink-3); }
 .home-art .ln { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .home-art .fw { fill: var(--paper); }
 .home-art .fk { fill: var(--ink); }
@@ -431,6 +432,13 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 .co-row .nm small { display: block; font-weight: 500; font-size: 11.5px; color: var(--ink-3); }
 .co-row .mk { font-size: 11px; font-weight: 700; color: var(--ink-3); }
 .co-row .star { font-size: 10.5px; font-weight: 700; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+.co-row .rk { display: grid; justify-items: end; line-height: 1.25; }
+.co-row .rk b { font-size: 13.5px; font-weight: 800; }
+.co-row .rk small { font-size: 10.5px; color: var(--ink-3); font-weight: 600; }
+.co-row .rank { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 11px; margin-right: 6px; padding: 0 5px; }
+.co-row:has(.rank) { grid-template-columns: 86px minmax(0, 1fr) auto; }
+.sortbar { gap: 6px; }
+.sortbar .chip { min-height: 30px; padding: 0 11px; font-size: 12px; }
 .empty { background: var(--surface); border-radius: var(--r-md); padding: 22px; text-align: center; color: var(--ink-3); font-size: 13px; }
 @media (min-width: 900px) {
   .wrap { max-width: 1040px; }
@@ -620,6 +628,7 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
                 <p class="note">企業名をタップすると、グラフで強調され、下に企業の説明が出ます。</p>
               </div>
               <div id="coDetail" aria-live="polite"></div>
+              <div class="chips sortbar" id="tSort"></div>
               <div class="table-wrap"><table class="fin" id="finTable"></table></div>
             </div>
           </div>
@@ -719,6 +728,7 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 <script src="data/financials.js"></script>
 <script src="data/calendar.js"></script>
 <script src="data/glossary.js"></script>
+<script src="js/scenes.js"></script>
 <script>
 "use strict";
 /* ============ utilities ============ */
@@ -853,7 +863,21 @@ function ringFace(name, seed) {
   return `<svg viewBox="0 0 60 60" aria-hidden="true"><rect width="60" height="60" fill="var(--il-bg)"/>${deco}<text x="30" y="31" text-anchor="middle" dominant-baseline="central" font-family="Zen Kaku Gothic New, sans-serif" font-weight="900" font-size="18" fill="var(--il-1)">${esc(name.slice(0, 2))}</text></svg>`;
 }
 // Home: a black-and-white line drawing of a study desk looking out on a city of industries
-function homeArt() {
+// 開くたびに絵を変える（前回と同じ絵は出さない）。?scene=port のように指定もできる
+const SCENES = window.GK_SCENES || [{ id: "desk", name: "研究デスク", svg: null }];
+function pickScene() {
+  let forced = null;
+  try { forced = new URLSearchParams(location.search).get("scene"); } catch (e) {}
+  const hit = SCENES.find(s => s.id === forced);
+  if (hit) return hit;
+  const last = store.get("scene", "");
+  const pool = SCENES.filter(s => s.id !== last);
+  const s = pool[Math.floor(Math.random() * pool.length)] || SCENES[0];
+  store.set("scene", s.id);
+  return s;
+}
+function homeArt(scene) {
+  if (scene && scene.svg) return `<svg viewBox="0 -96 400 456" preserveAspectRatio="xMidYMid meet">${scene.svg}</svg>`;
   const win = [];
   for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) win.push(`<rect class="fk" x="${57 + c * 10}" y="${80 + r * 14}" width="5" height="7"/>`);
   for (let r = 0; r < 6; r++) win.push(`<path class="ln" d="M101 ${62 + r * 12}h14" style="stroke-width:1.6"/>`);
@@ -941,7 +965,8 @@ function fmtDate(s) { s = String(s || ""); return s.length === 8 ? `${s.slice(0,
 function renderHome() {
   const d = new Date();
   $("#today").innerHTML = `${d.getFullYear()}<br>${d.getMonth() + 1}.${d.getDate()} ${"SUN MON TUE WED THU FRI SAT".split(" ")[d.getDay()]}`;
-  $("#homeArt").innerHTML = homeArt();
+  const scene = pickScene();
+  $("#homeArt").innerHTML = homeArt(scene) + `<span class="scene-cap">きょうの1枚：${esc(scene.name)}</span>`;
   const nListed = LISTED ? LISTED.list.length : null;
   const nDeep = INDUSTRIES.reduce((s, i) => s + i.companies.length, 0);
   const nNews = NEWS ? NEWS.items.length : 0;
@@ -1516,7 +1541,7 @@ function openComments(id) {
 }
 
 /* ============ INDUSTRY ============ */
-let indState = { mode: "deep", id: store.get("ind", "auto"), metric: null, sel: null, netSel: null, edgeOn: { cap: true, ally: true, supply: true, comp: true } };
+let indState = { tsort: "std", mode: "deep", id: store.get("ind", "auto"), metric: null, sel: null, netSel: null, edgeOn: { cap: true, ally: true, supply: true, comp: true } };
 let chart = null;
 function curInd() { return findInd(indState.id) || INDUSTRIES[0]; }
 function metricsOf(ind) {
@@ -1586,6 +1611,7 @@ $("#indNav").addEventListener("click", e => { const b = e.target.closest("[data-
 $("#metricSeg").addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b) return; indState.metric = b.dataset.m; $$("#metricSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderTable(); renderChart(); });
 $("#coChips").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) selectCompany(b.dataset.c); });
 $("#finTable").addEventListener("click", e => { const r = e.target.closest("tr[data-c]"); if (r) selectCompany(r.dataset.c); });
+$("#tSort").addEventListener("click", e => { const b = e.target.closest("[data-ts]"); if (!b) return; indState.tsort = b.dataset.ts; renderTable(); });
 
 const crosshair = {
   id: "crosshair",
@@ -1642,7 +1668,15 @@ function renderTable() {
   const ind = curInd(), key = indState.metric, isPct = key === "margin";
   const m = metricsOf(ind).find(x => x.key === key);
   const head = `<thead><tr><th>${esc(m.label)}${isPct ? "" : "（億円）"}</th>${D.yearLabels.map(y => `<th>${y}</th>`).join("")}<th>変化</th></tr></thead>`;
-  const rows = ind.companies.map(c => {
+  $("#tSort").innerHTML = `<span class="note" style="align-self:center">表の並び替え（${esc(m.label)}・最新期）</span>` + [["std", "標準"], ["desc", "高い順"], ["asc", "低い順"], ["growth", "伸び率順"]].map(([k, l]) => `<button class="chip" aria-pressed="${indState.tsort === k}" data-ts="${k}">${l}</button>`).join("");
+  const lastOf = c => series(ind, c, key)[LAST];
+  const growthOf = c => { const s = series(ind, c, key); return isPct ? (s[LAST] != null && s[LAST - 1] != null ? s[LAST] - s[LAST - 1] : null) : growth(s[LAST - 1], s[LAST]); };
+  const order = ind.companies.slice();
+  const by = f => (a, b) => (f(a) == null) - (f(b) == null) || (f(b) ?? 0) - (f(a) ?? 0);
+  if (indState.tsort === "desc") order.sort(by(lastOf));
+  if (indState.tsort === "asc") order.sort((a, b) => (lastOf(a) == null) - (lastOf(b) == null) || (lastOf(a) ?? 0) - (lastOf(b) ?? 0));
+  if (indState.tsort === "growth") order.sort(by(growthOf));
+  const rows = order.map(c => {
     const s = series(ind, c, key);
     const cells = s.map((v, i) => {
       if (v == null) return `<td class="muted">—</td>`;
@@ -1822,13 +1856,52 @@ $("#netLegend").addEventListener("click", e => {
   indState.edgeOn[b.dataset.et] = !indState.edgeOn[b.dataset.et]; renderNet();
 });
 
+/* --- ranking: 売上高・営業利益・利益率・伸び率で並べる --- */
+// 数値は自動取得した最新の決算短信、なければ「詳しく見る」業界の最新期
+const SORTS = [["code", "標準"], ["rev", "売上高"], ["op", "営業利益"], ["opm", "営業利益率"], ["growth", "売上の伸び率"]];
+function shortPeriod(p) { const m = /(\d{4})年(\d{1,2})月期/.exec(p || ""); return m ? `${m[1].slice(2)}/${m[2]}期` : (p || ""); }
+function finFor(code) {
+  const F = window.GK_FIN, f = F && F.items && F.items[code];
+  const e = f ? ((f.q && (!f.a || f.q.d >= f.a.d)) ? f.q : (f.a || f.q)) : null;
+  if (e) return { rev: e.rev ?? null, op: e.op ?? e.ord ?? null, prevRev: e.prev ? e.prev.rev ?? null : null,
+    label: shortPeriod(e.p) + (e.q ? " " + e.q.replace("第", "").replace("四半期", "Q") + "累計" : "") };
+  const c = CURATED_BY_CODE[code];
+  if (c) return { rev: c.rev ? c.rev[LAST] : null, op: c.op ? c.op[LAST] : null, prevRev: c.rev ? c.rev[LAST - 1] : null, label: shortPeriod(c.fy) };
+  return null;
+}
+function sortValue(code, key) {
+  const f = finFor(code); if (!f) return null;
+  if (key === "rev") return f.rev;
+  if (key === "op") return f.op;
+  if (key === "opm") return f.rev > 0 && f.op != null ? f.op / f.rev * 100 : null;
+  if (key === "growth") return f.prevRev > 0 && f.rev != null ? (f.rev / f.prevRev - 1) * 100 : null;
+  return null;
+}
+function sortRows(rows, key) {
+  if (!key || key === "code") return rows;
+  return rows.map(r => [sortValue(r[0], key), r]).sort((a, b) => (a[0] == null) - (b[0] == null) || (b[0] ?? 0) - (a[0] ?? 0)).map(x => x[1]);
+}
+function sortLabel(code, key) {
+  const v = sortValue(code, key); if (v == null) return `<span class="mk">—</span>`;
+  const f = finFor(code);
+  const txt = key === "opm" ? v.toFixed(1) + "%" : key === "growth" ? pct(v) : fmtOku(v);
+  const cls = key === "growth" || ((key === "op") && v < 0) ? (v >= 0 ? "up" : "down") : "";
+  return `<span class="rk"><b class="num ${cls}">${txt}</b><small>${esc(f.label)}</small></span>`;
+}
+function sortChipsHTML(cur) {
+  return `<div class="chips sortbar"><span class="note" style="align-self:center">並び替え</span>${SORTS.map(([k, l]) => `<button class="chip" aria-pressed="${cur === k}" data-sort="${k}">${l}${k === "code" ? "" : "↓"}</button>`).join("")}</div>`;
+}
+function rankedCount(rows, key) { return key === "code" ? rows.length : rows.filter(r => sortValue(r[0], key) != null).length; }
+
 /* --- all listed companies --- */
-let allState = { sector: null, market: "all", shown: 120 };
+let allState = { sector: null, market: "all", shown: 120, sort: "code" };
 const MARKETS = ["プライム", "スタンダード", "グロース"];
 function sectorName(code) { return (LISTED.sectors.find(s => s[0] === code) || [])[1] || ""; }
-function rowHTML(r, withSector) {
+function rowHTML(r, withSector, sortKey, rank) {
   const cur = CURATED_BY_CODE[r[0]];
-  return `<button class="co-row" data-code="${esc(r[0])}"><span class="code">${esc(r[0])}</span><span class="nm">${esc(r[1])}${cur ? `<span class="star">決算あり</span>` : ""}<small>${esc(withSector && LISTED ? sectorName(r[3]) + (r[5] ? " · " : "") : "")}${esc(r[5] || "")}</small></span><span class="mk">${esc(r[2])}</span></button>`;
+  const right = sortKey && sortKey !== "code" ? sortLabel(r[0], sortKey) : `<span class="mk">${esc(r[2])}</span>`;
+  const code = rank ? `<span class="code"><b class="rank num">${rank}</b>${esc(r[0])}</span>` : `<span class="code">${esc(r[0])}</span>`;
+  return `<button class="co-row" data-code="${esc(r[0])}">${code}<span class="nm">${esc(r[1])}${cur ? `<span class="star">決算あり</span>` : ""}<small>${esc(withSector && LISTED ? sectorName(r[3]) + (r[5] ? " · " : "") : "")}${esc(r[5] || "")}</small></span>${right}</button>`;
 }
 function renderAll() {
   const body = $("#allBody");
@@ -1849,14 +1922,17 @@ function renderAll() {
     return;
   }
   const name = sectorName(allState.sector);
-  const list = LISTED.list.filter(r => r[3] === allState.sector && (allState.market === "all" || r[2] === allState.market));
+  const list = sortRows(LISTED.list.filter(r => r[3] === allState.sector && (allState.market === "all" || r[2] === allState.market)), allState.sort);
+  const ranked = allState.sort !== "code";
   const deep = SECTOR_TO_IND[name] || [];
   body.innerHTML = `<div class="section">
     <button class="link" id="backSectors" style="justify-self:start">← 33業種一覧に戻る</button>
     <div class="section-head"><h2 class="h2">${esc(name)}</h2><span class="note">${list.length.toLocaleString("ja-JP")}社</span></div>
     ${deep.length ? `<div class="chips">${deep.map(id => `<button class="chip" data-deep="${id}">${esc(findInd(id).name)}を詳しく見る ${ic("arrow", "ic ic-sm")}</button>`).join("")}</div>` : ""}
     <div class="chips">${["all", ...MARKETS].map(m => `<button class="chip" aria-pressed="${allState.market === m}" data-mk="${m}">${m === "all" ? "すべての市場" : m}</button>`).join("")}</div>
-    <div class="co-rows">${list.slice(0, allState.shown).map(r => rowHTML(r, false)).join("") || `<div class="empty">該当する企業はありません</div>`}</div>
+    ${sortChipsHTML(allState.sort)}
+    ${ranked ? `<p class="note">決算の数値がある${rankedCount(list, allState.sort).toLocaleString("ja-JP")}社を順位づけ（数値は直近の決算短信。通期と四半期累計が混ざるので、規模の比較は目安。利益率・伸び率なら期間の違いの影響が小さい）。</p>` : ""}
+    <div class="co-rows">${list.slice(0, allState.shown).map((r, i) => rowHTML(r, false, allState.sort, ranked && sortValue(r[0], allState.sort) != null ? i + 1 : 0)).join("") || `<div class="empty">該当する企業はありません</div>`}</div>
     ${list.length > allState.shown ? `<button class="btn ghost sm" id="allMore">さらに表示（残り${(list.length - allState.shown).toLocaleString("ja-JP")}社）</button>` : ""}
   </div>`;
 }
@@ -1865,6 +1941,7 @@ $("#allBody").addEventListener("click", e => {
   if (e.target.closest("#backSectors")) { allState.sector = null; renderAll(); return; }
   const m = e.target.closest("[data-mk]"); if (m) { allState.market = m.dataset.mk; allState.shown = 120; renderAll(); return; }
   if (e.target.closest("#allMore")) { allState.shown += 200; renderAll(); return; }
+  const so = e.target.closest("[data-sort]"); if (so) { allState.sort = so.dataset.sort; allState.shown = 120; renderAll(); return; }
   const d = e.target.closest("[data-deep]"); if (d) { setMode("deep"); selectIndustry(d.dataset.deep); window.scrollTo({ top: 0 }); return; }
   const r = e.target.closest("[data-code]"); if (r) openListedCompany(r.dataset.code);
 });
@@ -1950,7 +2027,7 @@ const LISTED_BY_PREF = {};
 if (LISTED && LISTED.fields && LISTED.fields.includes("pref")) LISTED.list.forEach(r => { if (r[6]) (LISTED_BY_PREF[r[6]] = LISTED_BY_PREF[r[6]] || []).push(r); });
 const HAS_ADDR = Object.keys(LISTED_BY_PREF).length > 0;
 const regionListed = r => r.prefs.flatMap(p => LISTED_BY_PREF[p] || []);
-let regFilter = { pref: "all", sector: "all", q: "", shown: 60 };
+let regFilter = { pref: "all", sector: "all", q: "", shown: 60, sort: "code" };
 function renderMap() {
   const cs = 31, size = 28;
   const prefRegion = {}; REGIONS.forEach(r => r.prefs.forEach(p => prefRegion[p] = r.id));
@@ -1999,19 +2076,23 @@ function renderRegionAll() {
   const nq = regFilter.q ? normq(regFilter.q) : "";
   const list = inPref.filter(x => (regFilter.sector === "all" || x[3] === regFilter.sector) && (!nq || normq(x[1]).includes(nq) || x[0].startsWith(nq) || normq(x[7] || "").includes(nq)));
   list.sort((a, b) => (CURATED_BY_CODE[b[0]] ? 1 : 0) - (CURATED_BY_CODE[a[0]] ? 1 : 0) || ({ "プライム": 0, "スタンダード": 1, "グロース": 2 }[a[2]] ?? 3) - ({ "プライム": 0, "スタンダード": 1, "グロース": 2 }[b[2]] ?? 3) || a[0].localeCompare(b[0]));
+  const sorted = sortRows(list, regFilter.sort), ranked = regFilter.sort !== "code";
   box.innerHTML = `<div class="reg-head"><h2 class="h2">${esc(r.name)}に本社がある上場企業</h2><span class="num">${all.length.toLocaleString("ja-JP")}社</span></div>
     <div class="ind-nav" id="regPrefs">${[["all", all.length], ...prefCounts].map(([p, n]) => `<button class="chip" aria-pressed="${regFilter.pref === p}" data-pf="${p}">${p === "all" ? "すべて" : esc(p)}<span class="cnt">${n}</span></button>`).join("")}</div>
     <div class="reg-tools"><div class="row">
       <select class="input" id="regSector" aria-label="業種で絞り込む"><option value="all">すべての業種（${inPref.length}社）</option>${Object.entries(secCounts).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<option value="${c}" ${regFilter.sector === c ? "selected" : ""}>${esc(sectorName(c))}（${n}社）</option>`).join("")}</select>
       <input class="input" id="regQ" type="search" placeholder="社名・市区町村で絞り込む" value="${esc(regFilter.q)}" aria-label="社名・市区町村で絞り込む">
     </div></div>
-    <div class="co-rows">${list.slice(0, regFilter.shown).map(x => `<button class="co-row" data-code="${esc(x[0])}"><span class="code">${esc(x[0])}</span><span class="nm">${esc(x[1])}${CURATED_BY_CODE[x[0]] ? `<span class="star">決算あり</span>` : ""}<small>${esc(x[6] + (x[7] ? " " + x[7] : ""))} · ${esc(sectorName(x[3]))}</small></span><span class="mk">${esc(x[2])}</span></button>`).join("") || `<div class="empty">条件に合う企業はありません</div>`}</div>
+    ${sortChipsHTML(regFilter.sort)}
+    ${ranked ? `<p class="note">決算の数値がある${rankedCount(sorted, regFilter.sort).toLocaleString("ja-JP")}社を順位づけ（数値は直近の決算短信。通期と四半期累計が混ざるので、規模の比較は目安）。</p>` : ""}
+    <div class="co-rows">${sorted.slice(0, regFilter.shown).map((x, i) => { const rank = ranked && sortValue(x[0], regFilter.sort) != null ? i + 1 : 0; return `<button class="co-row" data-code="${esc(x[0])}"><span class="code">${rank ? `<b class="rank num">${rank}</b>` : ""}${esc(x[0])}</span><span class="nm">${esc(x[1])}${CURATED_BY_CODE[x[0]] ? `<span class="star">決算あり</span>` : ""}<small>${esc(x[6] + (x[7] ? " " + x[7] : ""))} · ${esc(sectorName(x[3]))}</small></span>${ranked ? sortLabel(x[0], regFilter.sort) : `<span class="mk">${esc(x[2])}</span>`}</button>`; }).join("") || `<div class="empty">条件に合う企業はありません</div>`}</div>
     ${list.length > regFilter.shown ? `<button class="btn ghost sm" id="regMore">さらに表示（残り${(list.length - regFilter.shown).toLocaleString("ja-JP")}社）</button>` : ""}
     <p class="note">本社所在地：${esc(LISTED.addressSource || "EDINET")}（登記上の所在地）。上場企業一覧：${esc(LISTED.source)}。</p>`;
 }
 $("#regAll").addEventListener("click", e => {
   const pf = e.target.closest("[data-pf]"); if (pf) { regFilter.pref = pf.dataset.pf; regFilter.sector = "all"; regFilter.shown = 60; renderRegionAll(); return; }
   if (e.target.closest("#regMore")) { regFilter.shown += 120; renderRegionAll(); return; }
+  const so = e.target.closest("[data-sort]"); if (so) { regFilter.sort = so.dataset.sort; regFilter.shown = 60; renderRegionAll(); return; }
   const r = e.target.closest("[data-code]"); if (r) openListedCompany(r.dataset.code);
 });
 $("#regAll").addEventListener("change", e => { if (e.target.id === "regSector") { regFilter.sector = e.target.value; regFilter.shown = 60; renderRegionAll(); } });
@@ -2021,7 +2102,7 @@ $("#regAll").addEventListener("input", e => {
   clearTimeout(regQTimer); regQTimer = setTimeout(() => { regFilter.q = e.target.value; regFilter.shown = 60; renderRegionAll(); const q = $("#regQ"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250);
 });
 function selectRegion(id, pref) {
-  if (id !== regState) regFilter = { pref: "all", sector: "all", q: "", shown: 60 };
+  if (id !== regState) regFilter = { pref: "all", sector: "all", q: "", shown: 60, sort: regFilter.sort };
   if (pref) { regFilter.pref = (LISTED_BY_PREF[pref] || []).length ? pref : "all"; regFilter.sector = "all"; regFilter.shown = 60; }
   regState = id; store.set("region", id); renderMap(); renderRegionList(); renderRegionAll();
 }
