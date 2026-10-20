@@ -11,16 +11,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gyoukai">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" id="touchIcon">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="data/industries.js"></script>
-<script src="data/companies.js"></script>
-<script src="data/news.js"></script>
-<script src="data/financials.js"></script>
-<script src="data/calendar.js"></script>
-<script src="data/glossary.js"></script>
 <style>
 /* Layout: phone-first app (max 760px). Home is one still black-and-white illustration you can only swipe up from; color appears only in chart series. */
 :root {
@@ -491,13 +488,61 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 .toast { position: fixed; z-index: 90; left: 50%; bottom: calc(var(--nav-h) + 70px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* launch animation: bars grow, the name rises, then the curtain lifts (the same upward motion as the home swipe) */
+.splash { position: fixed; inset: 0; z-index: 200; background: #0e0f12; color: #fff; display: grid; place-content: center; justify-items: center; gap: 14px; transition: transform .75s cubic-bezier(.7, 0, .2, 1); will-change: transform; }
+.splash.out { transform: translateY(-100%); }
+.splash svg { width: 112px; height: 112px; overflow: visible; }
+.splash .bar { transform-box: fill-box; transform-origin: 50% 100%; animation: sp-grow .55s cubic-bezier(.2, .9, .25, 1.15) both; }
+.splash .b2 { animation-delay: .12s; } .splash .b3 { animation-delay: .24s; }
+.splash .base { stroke-dasharray: 520; animation: sp-draw .45s ease-out both; }
+.splash .word { font-family: var(--font-display); font-weight: 900; font-size: 44px; letter-spacing: -0.03em; display: flex; }
+.splash .word span { display: inline-block; animation: sp-rise .5s cubic-bezier(.2, .8, .2, 1) both; }
+.splash .sp-tag { font-weight: 700; font-size: 14px; color: #a7abb3; animation: sp-fade .5s ease-out .95s both; }
+@keyframes sp-grow { from { transform: scaleY(0); } }
+@keyframes sp-draw { from { stroke-dashoffset: 520; } }
+@keyframes sp-rise { from { transform: translateY(18px); opacity: 0; } }
+@keyframes sp-fade { from { opacity: 0; } }
+/* the home screen settles in as the curtain lifts */
+.home.enter > * { animation: home-in .7s cubic-bezier(.2, .8, .2, 1) both; }
+.home.enter > :nth-child(2) { animation-delay: .08s; } .home.enter > :nth-child(3) { animation-delay: .16s; } .home.enter > :nth-child(4) { animation-delay: .24s; }
+@keyframes home-in { from { transform: translateY(26px); opacity: 0; } }
+.icon-opts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.icon-opts button { display: grid; justify-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #c9ccd2; }
+.icon-opts img { width: 100%; max-width: 64px; aspect-ratio: 1; border-radius: 22.37%; display: block; }
+.icon-opts button[aria-pressed="true"] img { outline: 3px solid #fff; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
+  .splash { transition: opacity .3s; } .splash.out { transform: none; opacity: 0; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .bars span.cur i { animation-duration: var(--dur, 6s) !important; }
 }
 </style>
 </head>
 <body>
+<div class="splash" id="splash" aria-hidden="true">
+  <svg viewBox="0 0 1024 1024"><rect class="bar b1" x="282" y="530" width="120" height="230" rx="22" fill="#fff"/><rect class="bar b2" x="452" y="410" width="120" height="350" rx="22" fill="#fff"/><rect class="bar b3" x="622" y="250" width="120" height="510" rx="22" fill="#fff"/><path class="base" d="M252 806H772" stroke="#fff" stroke-width="32" stroke-linecap="round"/></svg>
+  <div class="word">Gyoukai</div>
+  <div class="sp-tag">決算で、業界を読む。</div>
+</div>
+<script>
+(function () {
+  var sp = document.getElementById("splash"), t0 = Date.now(), done = false;
+  var word = sp.querySelector(".word");
+  word.innerHTML = "Gyoukai".split("").map(function (c, i) { return '<span style="animation-delay:' + (0.42 + i * 0.05).toFixed(2) + 's">' + c + "</span>"; }).join("");
+  var quick = false;
+  try { quick = !!sessionStorage.getItem("gyoukai.splashed") || /[?&]article=/.test(location.search); sessionStorage.setItem("gyoukai.splashed", "1"); } catch (e) {}
+  function finish() {
+    if (done) return; done = true;
+    sp.classList.add("out");
+    var home = document.getElementById("home"); if (home && !quick) home.classList.add("enter");
+    setTimeout(function () { sp.remove(); if (home) home.classList.remove("enter"); }, 900);
+  }
+  if (quick) { sp.remove(); return; }  // 同じセッションで再読み込みしたときは出さない
+  sp.addEventListener("click", finish);
+  // 最低1.5秒見せ、アプリの準備ができたら幕を上げる（最大6秒）
+  document.addEventListener("DOMContentLoaded", function () { setTimeout(finish, Math.max(150, 1500 - (Date.now() - t0))); });
+  setTimeout(finish, 6000);
+})();
+</script>
 
 <main id="app">
   <!-- ① HOME: one picture. Only swiping up does anything. -->
@@ -655,6 +700,9 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
     <button class="mi" id="menuNewsOpen" style="min-height:0;width:100%"></button>
     <div class="menu-section">きょうの決算用語</div>
     <div class="term" id="term"></div>
+    <div class="menu-section">アプリのアイコン</div>
+    <div class="icon-opts" id="iconOpts" role="group" aria-label="アプリのアイコンを選ぶ"></div>
+    <p class="lead" style="margin-top:10px">選んだあとにSafariの「共有 → ホーム画面に追加」で追加し直すと、ホーム画面のアイコンが変わります。</p>
     <div class="menu-section">今後追加予定</div>
     <div class="menu-grid" id="menuSoon"></div>
   </div>
@@ -664,6 +712,13 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 <div id="sheetRoot"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="data/industries.js"></script>
+<script src="data/companies.js"></script>
+<script src="data/news.js"></script>
+<script src="data/financials.js"></script>
+<script src="data/calendar.js"></script>
+<script src="data/glossary.js"></script>
 <script>
 "use strict";
 /* ============ utilities ============ */
@@ -898,6 +953,23 @@ function renderHome() {
        <span class="big">${INDUSTRIES.length}<small>業界</small></span>
        <span class="meta"><span>${nDeep}社の5年決算</span><span>最新：2026年3月期</span></span>`;
 }
+
+/* ============ app icon (applied to the home-screen icon the next time it is added) ============ */
+const ICON_CHOICES = [["a-bars", "成長バー"], ["b-bars-light", "白"], ["c-g", "G"], ["d-city", "街並み"], ["e-kanji", "業"]];
+function applyIcon(id) {
+  const ok = ICON_CHOICES.some(c => c[0] === id) ? id : "a-bars";
+  $("#touchIcon").href = ok === "a-bars" ? "icons/apple-touch-icon.png" : `icons/${ok}-180.png`;
+  return ok;
+}
+let iconChoice = applyIcon(store.get("icon", "a-bars"));
+function renderIconOpts() {
+  $("#iconOpts").innerHTML = ICON_CHOICES.map(([id, label]) => `<button aria-pressed="${id === iconChoice}" data-icon-id="${id}"><img src="icons/${id}-180.png" alt="">${esc(label)}</button>`).join("");
+}
+$("#iconOpts").addEventListener("click", e => {
+  const b = e.target.closest("[data-icon-id]"); if (!b) return;
+  iconChoice = applyIcon(b.dataset.iconId); store.set("icon", iconChoice); renderIconOpts();
+  toast("アイコンを変えました。ホーム画面に追加し直すと反映されます");
+});
 
 /* ============ dark menu (swipe up) ============ */
 const openPageLater = name => () => window.GK && GK.openPage(name);
@@ -1970,6 +2042,7 @@ new MutationObserver(rerender).observe(document.documentElement, { attributes: t
 hydrateIcons();
 renderHome();
 renderMenu();
+renderIconOpts();
 renderStories();
 renderNews();
 renderFeed();
