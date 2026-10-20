@@ -1,9 +1,11 @@
 """東証の上場銘柄一覧（JPX公開のExcel）から全上場企業の一覧を作り、data/companies.js に書き出す。
+EDINET のコードリスト（金融庁が公開、APIキー不要）から本社所在地と決算日を足す。
 
 GitHub Actions から毎日実行される。手元で実行する場合:
     pip install xlrd==2.0.1 openpyxl==3.1.5
     python scripts/build_companies.py
 """
+import csv
 import datetime
 import io
 import json
@@ -12,9 +14,12 @@ import re
 import unicodedata
 import urllib.parse
 import urllib.request
+import zipfile
 
 PAGE = "https://www.jpx.co.jp/markets/statistics-equities/misc/01.html"
 UA = {"User-Agent": "Mozilla/5.0 (gyoukai-data-bot)"}
+EDINET_CODES = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip"
+PREF_RE = re.compile(r"^(北海道|東京都|京都府|大阪府|.{2,3}?県)")
 OUT = pathlib.Path(__file__).resolve().parent.parent / "data" / "companies.js"
 
 MARKETS = {
@@ -62,6 +67,57 @@ def find_list_url():
     return urllib.parse.urljoin(PAGE, best)
 
 
+def split_address(addr):
+    """「愛知県豊田市トヨタ町1番地」→（愛知, 豊田市）"""
+    addr = unicodedata.normalize("NFKC", addr or "").replace(" ", "").replace("\u3000", "")
+    m = PREF_RE.match(addr)
+    if not m:
+        return "", ""
+    pref = m.group(1)
+    rest = addr[len(pref):]
+    city = ""
+    # 政令市の区 → 郡の町村 → 市 → 東京の区・町村 の順に試す
+    for pat in (r"^([^区郡]{1,6}?市.{1,5}?区)", r"^(.{1,6}?郡.{1,6}?[町村])", r"^([^区]{1,5}?市)", r"^(.{1,6}?[区町村])"):
+        mm = re.match(pat, rest)
+        if mm:
+            city = mm.group(1)
+            if rest[len(city):len(city) + 1] == "市" and not city.endswith("区"):
+                city += "市"  # 四日市市・廿日市市など
+            break
+    short = pref if pref == "北海道" else pref[:-1]
+    return short, city
+
+
+def load_edinet_addresses():
+    """証券コード（4桁）→（都道府県, 市区町村, 決算日）。取れなければ空の辞書を返す"""
+    try:
+        raw = get(EDINET_CODES)
+        with zipfile.ZipFile(io.BytesIO(raw)) as z:
+            name = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+            text = z.read(name).decode("cp932", "replace")
+    except Exception as e:  # 所在地がなくても一覧そのものは作る
+        print("EDINETコードリストを取得できませんでした:", e)
+        return {}
+    rows = list(csv.reader(io.StringIO(text)))
+    hi = next((i for i, r in enumerate(rows[:5]) if any("証券コード" in c for c in r)), None)
+    if hi is None:
+        print("EDINETコードリストの見出し行が見つかりませんでした")
+        return {}
+    head = [unicodedata.normalize("NFKC", c) for c in rows[hi]]
+    ci = {k: next(i for i, h in enumerate(head) if k in h) for k in ("証券コード", "所在地", "決算日")}
+    out = {}
+    for r in rows[hi + 1:]:
+        if len(r) <= max(ci.values()):
+            continue
+        code = unicodedata.normalize("NFKC", r[ci["証券コード"]]).strip()
+        if len(code) != 5:
+            continue
+        pref, city = split_address(r[ci["所在地"]])
+        out[code[:4]] = (pref, city, unicodedata.normalize("NFKC", r[ci["決算日"]]).strip())
+    print(f"EDINET: {len(out)} 社の所在地")
+    return out
+
+
 def main():
     url = find_list_url()
     print("download:", url)
@@ -89,13 +145,18 @@ def main():
             "" if scale == "-" else scale,
         ])
 
+    addr = load_edinet_addresses()
+    for row in rows:
+        row.extend(addr.get(row[0], ("", "", "")))
+
     rows.sort(key=lambda x: x[0])
     data = {
         "source": "日本取引所グループ「東証上場銘柄一覧」",
         "asOf": as_of,
         "built": datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec="minutes"),
         "sectors": [[k, sectors[k]] for k in sorted(sectors, key=int)],
-        "fields": ["code", "name", "market", "sector33", "sector17", "scale"],
+        "fields": ["code", "name", "market", "sector33", "sector17", "scale", "pref", "city", "fyEnd"],
+        "addressSource": "金融庁 EDINET コードリスト" if addr else "",
         "list": rows,
     }
     OUT.parent.mkdir(exist_ok=True)
