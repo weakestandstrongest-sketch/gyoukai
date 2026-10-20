@@ -200,7 +200,8 @@
       const codes = [...watch];
       const recent = FIN ? FIN.recent.filter(r => watch.has(r.c)).slice(0, 40) : [];
       const t = todayISO();
-      const upcoming = CAL ? CAL.items.filter(r => watch.has(r[1]) && r[0] >= t).slice(0, 30) : [];
+      const announced = new Set(FIN ? FIN.recent.map(r => r.c + r.d) : []);
+      const upcoming = CAL ? CAL.items.filter(r => watch.has(r[1]) && r[0] >= t && !announced.has(r[1] + r[0])).slice(0, 30) : [];
       body().innerHTML = `<div class="form">
         <p class="sub">ウォッチしている企業の決算が出ると、ここに表示されます。企業の説明画面の「☆ ウォッチ」で追加できます。</p>
         <div class="section-head"><h2 class="h2">ウォッチ中（${codes.length}社）</h2><button class="link" id="alAdd">＋ 企業を追加</button></div>
@@ -260,7 +261,8 @@
     q.addEventListener("input", () => {
       const nq = normq(q.value.trim());
       const src = LISTED ? LISTED.list : INDUSTRIES.flatMap(i => i.companies.map(c => [c.code, c.name, ""]));
-      const hits = nq ? src.filter(r => r[0].startsWith(nq) || normq(r[1]).includes(nq)).slice(0, 12) : [];
+      const hits = nq ? src.filter(r => r[0].startsWith(nq) || normq(r[1]).includes(nq))
+        .sort((a, b) => (!!CURATED_BY_CODE[b[0]] - !!CURATED_BY_CODE[a[0]]) || (normq(b[1]).startsWith(nq) - normq(a[1]).startsWith(nq)) || a[1].length - b[1].length).slice(0, 12) : [];
       $("#asList", box).innerHTML = hits.map(r => `<button class="co-row" data-pick="${esc(r[0])}"><span class="code">${esc(r[0])}</span><span class="nm">${esc(r[1])}</span><span class="mk">追加</span></button>`).join("");
     });
     box.onclick = e => { const p = e.target.closest("[data-pick]"); if (p) { e.stopPropagation(); onPick(p.dataset.pick, coName(p.dataset.pick)); box.innerHTML = ""; } };
