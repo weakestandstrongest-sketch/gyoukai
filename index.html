@@ -1147,7 +1147,7 @@ function prevSlide() {
   viewer.addEventListener("pointercancel", () => { p = null; viewer.classList.remove("paused"); });
   document.addEventListener("keydown", e => {
     if (sv) { if (e.key === "Escape") closeViewer(); if (e.key === "ArrowRight") nextSlide(); if (e.key === "ArrowLeft") prevSlide(); return; }
-    if (e.key === "Escape") { if ($("#sheetRoot").firstChild) closeSheet(); else if (menu.classList.contains("open")) closeMenu(); }
+    if (e.key === "Escape") { if ($("#sheetRoot").firstChild) { closeSheet(); e.preventDefault(); } else if (menu.classList.contains("open")) closeMenu(); }
   });
 })();
 

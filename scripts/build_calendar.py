@@ -85,6 +85,9 @@ def main():
             code, date = r[c_code][:4], to_date(r[c_date])
             if not code or not date or date < today:
                 continue
+            name = r[c_name] if c_name is not None else ""
+            if "投資法人" in name or (c_sec is not None and r[c_sec] in ("REIT", "インフラファンド")):
+                continue  # REIT・インフラファンドは除く
             items[(date, code)] = [date, code, r[c_name] if c_name is not None else "",
                                    r[c_end] if c_end is not None else "", r[c_kind] if c_kind is not None else "",
                                    r[c_sec] if c_sec is not None else ""]

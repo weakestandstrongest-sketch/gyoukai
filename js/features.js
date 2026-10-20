@@ -91,11 +91,15 @@
   let pageName = null, pushed = false;
   function openPage(name, { fromPop = false } = {}) {
     if (!PAGES[name]) return;
+    const wasOpen = !!pageName;
     pageName = name;
     if (typeof closeMenu === "function" && menu.classList.contains("open")) closeMenu();
     page.hidden = false; page.scrollTop = 0; document.body.classList.add("locked");
     $("#pageTitle").textContent = PAGES[name];
-    if (!fromPop && location.hash.slice(1) !== name) { history.pushState(null, "", "#" + name); pushed = true; }
+    if (!fromPop && location.hash.slice(1) !== name) {
+      if (wasOpen) history.replaceState(null, "", "#" + name);  // 画面から画面へは履歴を積まない
+      else { history.pushState(null, "", "#" + name); pushed = true; }
+    }
     RENDER[name]();
   }
   function closePage(fromPop) {
@@ -107,7 +111,7 @@
     updateBadges();
   }
   $("#pageBack").addEventListener("click", () => closePage(false));
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !page.hidden && !$("#sheetRoot").firstChild) closePage(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && !page.hidden && !$("#sheetRoot").firstChild) closePage(false); });
   const body = () => $("#pageBody");
 
   // ---------- helpers ----------
@@ -267,8 +271,9 @@
   function calEvents() {
     const ev = {};
     const add = (d, item) => (ev[d] = ev[d] || []).push(item);
-    if (CAL) CAL.items.forEach(r => add(r[0], { code: r[1], name: r[2] || coName(r[1]), sub: [r[4], r[3]].filter(Boolean).join(" · "), done: false }));
+    // 発表済みを先に入れて、同じ日の「予定」より優先する
     if (FIN) FIN.recent.forEach(r => add(r.d, { code: r.c, name: coName(r.c), sub: `${r.k} · ${r.t} 発表済み`, done: true }));
+    if (CAL) CAL.items.forEach(r => add(r[0], { code: r[1], name: r[2] || coName(r[1]), sub: [r[4] === "-" ? "" : r[4], r[3] ? r[3].replace(/-/g, "/") + " 期末" : ""].filter(Boolean).join(" · "), done: false }));
     const keep = x => calFilter === "all" || (calFilter === "watch" ? watch.has(x.code) : !!CURATED_BY_CODE[x.code]);
     Object.keys(ev).forEach(d => {
       const seenCodes = new Set();
