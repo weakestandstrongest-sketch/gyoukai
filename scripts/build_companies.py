@@ -114,7 +114,10 @@ def load_edinet_addresses():
             continue
         pref, city = split_address(r[ci["所在地"]])
         out[code[:4]] = (pref, city, unicodedata.normalize("NFKC", r[ci["決算日"]]).strip())
-    print(f"EDINET: {len(out)} 社の所在地")
+    print(f"EDINET: {len(out)} 社の所在地（都道府県を判定できた社: {sum(1 for v in out.values() if v[0])}）")
+    print("見出し:", head)
+    for r in rows[hi + 1:hi + 6]:
+        print("例:", r)
     return out
 
 
