@@ -168,8 +168,8 @@ def main():
         v = ["" if x is None else x for x in v]
         market = MARKETS.get(cell_str(v[col["市場・商品区分"]]))
         s33 = cell_str(v[col["33業種コード"]])
-        if not market or s33 in ("", "-"):
-            continue  # ETF・REIT・出資証券などは除く
+        if not market or s33 in ("", "-") or len(cell_str(v[col["コード"]])) != 4:
+            continue  # ETF・REIT・出資証券・優先株（5桁コード）などは除く
         as_of = as_of or cell_str(v[col["日付"]])
         sectors[s33] = cell_str(v[col["33業種区分"]])
         scale = cell_str(v[col["規模区分"]])
