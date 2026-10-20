@@ -10,6 +10,7 @@ import html
 import json
 import pathlib
 import re
+import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -66,23 +67,44 @@ TRUSTED = ["日本経済新聞", "日経", "共同通信", "時事", "NHK", "ロ
 EVENT_WORDS = ["決算", "上方修正", "下方修正", "最高益", "赤字", "黒字", "買収", "TOB", "統合", "再編", "提携", "撤退", "増産", "減産", "新工場", "値上げ", "関税", "利上げ", "円安", "円高", "規制", "受注", "業績予想"]
 
 
-def fetch_rss(query):
-    q = urllib.parse.quote(f"{query} when:2d")
-    url = f"https://news.google.com/rss/search?q={q}&hl=ja&gl=JP&ceid=JP:ja"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (gyoukai-data-bot)"})
-    with urllib.request.urlopen(req, timeout=30) as res:
-        root = ET.fromstring(res.read())
+# Google ニュースが使えないときの予備（カテゴリ別のRSS）
+FALLBACK_FEEDS = [
+    ("Yahoo!ニュース", "https://news.yahoo.co.jp/rss/topics/business.xml"),
+    ("Yahoo!ニュース", "https://news.yahoo.co.jp/rss/topics/it.xml"),
+    ("NHKニュース", "https://www3.nhk.or.jp/rss/news/cat5.xml"),
+]
+HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+           "Accept-Language": "ja,en;q=0.8"}
+
+
+def get_xml(url, tries=3):
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=30) as res:
+                return ET.fromstring(res.read())
+        except Exception as e:
+            if i == tries - 1:
+                raise
+            time.sleep(4 * (i + 1))
+
+
+def parse_items(root, default_src=""):
     for item in root.iter("item"):
         title = html.unescape(item.findtext("title") or "").strip()
         src_el = item.find("source")
-        source = (src_el.text or "").strip() if src_el is not None else ""
+        source = (src_el.text or "").strip() if src_el is not None else default_src
         if source and title.endswith(" - " + source):
             title = title[: -len(" - " + source)].strip()
         try:
             at = email.utils.parsedate_to_datetime(item.findtext("pubDate"))
         except (TypeError, ValueError):
             continue
-        yield {"t": title, "src": source, "url": item.findtext("link") or "", "at": at}
+        yield {"t": title, "src": source, "url": (item.findtext("link") or "").strip(), "at": at}
+
+
+def fetch_rss(query):
+    q = urllib.parse.quote(f"{query} when:2d")
+    return parse_items(get_xml(f"https://news.google.com/rss/search?q={q}&hl=ja&gl=JP&ceid=JP:ja"))
 
 
 def hit(pattern, text):
@@ -97,12 +119,19 @@ def norm(title):
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
     seen, items = set(), []
+    batches = []
     for ind_id, (_, queries, _) in INDUSTRIES.items():
         try:
-            fetched = list(fetch_rss(" OR ".join(queries)))
+            batches.append((ind_id, list(fetch_rss(" OR ".join(queries)))))
         except Exception as e:  # 1業界の失敗で全体を止めない
             print(f"skip {ind_id}: {e}")
-            continue
+        time.sleep(1.5)
+    for src, url in FALLBACK_FEEDS:
+        try:
+            batches.append((None, list(parse_items(get_xml(url), src))))
+        except Exception as e:
+            print(f"skip {url}: {e}")
+    for ind_id, fetched in batches:
         for it in fetched:
             if (now - it["at"]).total_seconds() > WINDOW_HOURS * 3600:
                 continue
@@ -110,8 +139,10 @@ def main():
             if not it["t"] or key in seen:
                 continue
             seen.add(key)
-            it["main"] = ind_id
-            items.append(it)
+            # 予備のRSSは、見出しに最初に出てくる業界をその記事の業界にする
+            it["main"] = ind_id or next((i for i, (_, _, words) in INDUSTRIES.items() if any(w in it["t"] for w in words)), None)
+            if it["main"]:
+                items.append(it)
 
     out = []
     for it in items:
@@ -148,8 +179,12 @@ def main():
         if len(picked) >= MAX_ITEMS:
             break
 
+    if not picked:
+        # 取得に失敗した日は、前回のニュースを消さずに残す
+        print("ニュースを1件も取得できなかったため、前回のデータを残します")
+        return
     data = {
-        "source": "Google ニュース（各媒体の見出しとリンク）",
+        "source": "Google ニュース・Yahoo!ニュース・NHK（各媒体の見出しとリンク）",
         "built": datetime.datetime.now(JST).isoformat(timespec="minutes"),
         "industries": {k: v[0] for k, v in INDUSTRIES.items()},
         "items": picked,

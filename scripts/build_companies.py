@@ -19,6 +19,8 @@ import zipfile
 PAGE = "https://www.jpx.co.jp/markets/statistics-equities/misc/01.html"
 UA = {"User-Agent": "Mozilla/5.0 (gyoukai-data-bot)"}
 EDINET_CODES = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip"
+# EDINET の所在地は都道府県が省かれていることが多いので、郵便番号データで市区町村→都道府県を引く
+KEN_ALL = "https://www.post.japanpost.jp/zipcode/dl/kogaki/zip/ken_all.zip"
 PREF_RE = re.compile(r"^(北海道|東京都|京都府|大阪府|.{2,3}?県)")
 OUT = pathlib.Path(__file__).resolve().parent.parent / "data" / "companies.js"
 
@@ -67,12 +69,52 @@ def find_list_url():
     return urllib.parse.urljoin(PAGE, best)
 
 
+CITY_PREFS = {}   # 市区町村名 → [都道府県名, ...]
+CITY_TOWNS = {}   # (都道府県名, 市区町村名) → 町域名のリスト
+
+
+def load_city_table():
+    try:
+        with zipfile.ZipFile(io.BytesIO(get(KEN_ALL))) as z:
+            text = z.read(z.namelist()[0]).decode("cp932", "replace")
+    except Exception as e:
+        print("郵便番号データを取得できませんでした:", e)
+        return
+    for r in csv.reader(io.StringIO(text)):
+        if len(r) < 9:
+            continue
+        pref, city, town = r[6], r[7], re.sub(r"（.*", "", r[8])
+        prefs = CITY_PREFS.setdefault(city, [])
+        if pref not in prefs:
+            prefs.append(pref)
+        if town and "以下に掲載がない場合" not in town:
+            CITY_TOWNS.setdefault((pref, city), []).append(town)
+    print(f"郵便番号データ: {len(CITY_PREFS)} 市区町村")
+
+
+def guess_pref(addr):
+    """都道府県のない住所から（都道府県, 市区町村）を推定する"""
+    for n in range(min(12, len(addr)), 1, -1):
+        city = addr[:n]
+        prefs = CITY_PREFS.get(city)
+        if not prefs:
+            continue
+        if len(prefs) > 1:  # 府中市・伊達市など同名の市は町域名で見分ける
+            rest = addr[n:]
+            prefs = [p for p in prefs if any(t and rest.startswith(t) for t in CITY_TOWNS.get((p, city), []))] or prefs
+        return prefs[0], city
+    return "", ""
+
+
 def split_address(addr):
-    """「愛知県豊田市トヨタ町1番地」→（愛知, 豊田市）"""
+    """「愛知県豊田市トヨタ町1番地」→（愛知, 豊田市）。都道府県がなければ郵便番号データで補う"""
     addr = unicodedata.normalize("NFKC", addr or "").replace(" ", "").replace("\u3000", "")
     m = PREF_RE.match(addr)
     if not m:
-        return "", ""
+        pref, city = guess_pref(addr)
+        if not pref:
+            return "", ""
+        return (pref if pref == "北海道" else pref[:-1]), city
     pref = m.group(1)
     rest = addr[len(pref):]
     city = ""
@@ -115,9 +157,8 @@ def load_edinet_addresses():
         pref, city = split_address(r[ci["所在地"]])
         out[code[:4]] = (pref, city, unicodedata.normalize("NFKC", r[ci["決算日"]]).strip())
     print(f"EDINET: {len(out)} 社の所在地（都道府県を判定できた社: {sum(1 for v in out.values() if v[0])}）")
-    print("見出し:", head)
-    for r in rows[hi + 1:hi + 6]:
-        print("例:", r)
+    for r in rows[hi + 1:hi + 4]:
+        print("例:", r[ci["所在地"]], "→", split_address(r[ci["所在地"]]))
     return out
 
 
@@ -148,6 +189,7 @@ def main():
             "" if scale == "-" else scale,
         ])
 
+    load_city_table()
     addr = load_edinet_addresses()
     for row in rows:
         row.extend(addr.get(row[0], ("", "", "")))

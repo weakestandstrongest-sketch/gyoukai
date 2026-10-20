@@ -464,6 +464,27 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 .co p { margin: 0; font-size: 13px; color: var(--ink-2); }
 .co .go { justify-self: start; display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; font-weight: 700; border-bottom: 1.5px solid var(--ink); padding-bottom: 1px; }
 
+/* region: every listed company */
+.reg-tools { display: grid; gap: 10px; }
+.reg-tools select { appearance: none; -webkit-appearance: none; background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b9099' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 16px; padding-right: 36px; }
+.reg-tools .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+@media (max-width: 420px) { .reg-tools .row { grid-template-columns: 1fr; } }
+
+/* article (news opened inside Gyoukai) */
+.article h2 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.45; text-wrap: balance; }
+.article .src { font-size: 12px; color: var(--ink-3); font-weight: 700; }
+.article .why { display: grid; gap: 8px; }
+.article .why div { background: var(--bg); border-radius: var(--r-md); padding: 12px 14px; font-size: 13.5px; color: var(--ink-2); line-height: 1.7; }
+.article .why b { color: var(--ink); display: block; font-size: 13px; margin-bottom: 2px; }
+.article .actions { display: grid; gap: 8px; }
+.article .rel { display: grid; gap: 8px; }
+.article .rel a { display: grid; gap: 2px; text-decoration: none; padding: 10px 0; border-top: 1px solid var(--line); }
+.article .rel a b { font-size: 14px; line-height: 1.5; }
+.article .rel a span { font-size: 11.5px; color: var(--ink-3); }
+.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; font-size: 14px; line-height: 1.7; }
+.steps code, .codebox { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: var(--bg); border-radius: 6px; padding: 2px 6px; overflow-wrap: anywhere; }
+.codebox { display: block; padding: 10px 12px; margin-top: 6px; }
+
 .toast { position: fixed; z-index: 90; left: 50%; bottom: calc(var(--nav-h) + 70px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -509,6 +530,7 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
         <div class="ind-nav" id="newsFilter" role="group" aria-label="業界で絞り込む"></div>
         <div class="news-list" id="newsList"></div>
         <button class="btn ghost sm" id="newsMore" hidden>もっと見る</button>
+        <button class="chip" id="newsOpenBtn" style="justify-self:start"></button>
         <p class="note">見出しとリンクはGoogle ニュース経由で各媒体の記事を自動収集（毎朝更新）。＋は追い風、−は逆風、±はどちらもありうる影響を表します。投資判断の根拠にはしないでください。</p>
       </div>
 
@@ -595,6 +617,7 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
         <div class="reg-head"><h2 class="h2" id="regName"></h2><span class="num" id="regCount"></span></div>
         <div class="co-list" id="coList"></div>
       </div>
+      <div class="section" id="regAll"></div>
       <p class="note disclaimer">本社所在地は市区町村まで。売上高等は直近の決算期の概数で、決算期は各カードに記載しています。</p>
     </div>
   </section>
@@ -625,6 +648,8 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
     <div class="hscroll" id="watchlist"></div>
     <div class="menu-section">今日の注目ニュース</div>
     <div id="menuNews"></div>
+    <div class="menu-section">ニュースの開き方</div>
+    <button class="mi" id="menuNewsOpen" style="min-height:0;width:100%"></button>
     <div class="menu-section">きょうの決算用語</div>
     <div class="term" id="term"></div>
     <div class="menu-section">今後追加予定</div>
@@ -908,7 +933,7 @@ function renderMenu() {
   });
 
   const top = NEWS ? NEWS.items.slice(0, 3) : [];
-  $("#menuNews").innerHTML = top.length ? top.map(n => `<a class="headline" href="${esc(n.url)}" target="_blank" rel="noopener"><b>${esc(n.t)}</b><span>${esc(n.src)} · ${esc(timeLabel(n.at))}</span></a>`).join("")
+  $("#menuNews").innerHTML = top.length ? top.map(n => `<a class="headline" href="${esc(n.url)}" target="_blank" rel="noopener" data-ni="${NEWS.items.indexOf(n)}"><b>${esc(n.t)}</b><span>${esc(n.src)} · ${esc(timeLabel(n.at))}</span></a>`).join("")
     : `<p class="lead">ニュースはまだ取得されていません。</p>`;
 
   const day = Math.floor(Date.now() / 864e5), t = D.terms[day % D.terms.length];
@@ -1042,7 +1067,7 @@ function drawSlide() {
     body = `<div class="slide-media">${illo(g.seed + sv.si, { big: g.name.length > 5 ? g.name.slice(0, 5) : g.name, tag: "NEWS" })}</div>
       <div class="k">${esc(s.k)}</div><h3>${esc(s.t)}</h3>
       <p>影響が考えられる業界</p>${impactHTML(s.news)}
-      <a class="open" href="${esc(s.news.url)}" target="_blank" rel="noopener">記事を読む ${ic("ext", "ic ic-sm")}</a>`;
+      <button class="open" id="svOpen">記事を読む ${ic("arrow", "ic ic-sm")}</button>`;
   } else {
     body = `<div class="slide-media">${s.img ? `<img src="${s.img}" alt="">` : illo(g.seed + sv.si, { big: s.big || "", unit: s.unit || "", tag: s.k })}</div>
       <div class="k">${esc(s.k || "")}</div><h3>${esc(s.t)}</h3><p>${esc(s.b)}</p>
@@ -1063,6 +1088,7 @@ function drawSlide() {
   </div>`;
   $(".bars .cur i", viewer).addEventListener("animationend", nextSlide);
   $("#svClose").addEventListener("click", e => { e.stopPropagation(); closeViewer(); });
+  const op = $("#svOpen"); if (op) op.addEventListener("click", e => { e.stopPropagation(); const n = s.news; closeViewer(); openNews(n); });
   const del = $("#svDel"); if (del) del.addEventListener("click", e => {
     e.stopPropagation();
     userStories = userStories.filter(u => u.id !== s.uid); store.set("stories", userStories);
@@ -1128,13 +1154,135 @@ function renderNews() {
   $("#newsFilter").innerHTML = `<button class="chip" aria-pressed="${newsFilter === "all"}" data-nf="all">すべて<span class="cnt">${NEWS.items.length}</span></button>` +
     ids.map(i => `<button class="chip" aria-pressed="${newsFilter === i}" data-nf="${i}">${esc(IND_NAME[i] || i)}<span class="cnt">${counts[i]}</span></button>`).join("");
   const list = NEWS.items.filter(n => newsFilter === "all" || n.inds.includes(newsFilter));
-  $("#newsList").innerHTML = list.slice(0, newsShown).map(n => `<a class="news" href="${esc(n.url)}" target="_blank" rel="noopener">
+  $("#newsList").innerHTML = list.slice(0, newsShown).map(n => `<a class="news" href="${esc(n.url)}" target="_blank" rel="noopener" data-ni="${NEWS.items.indexOf(n)}">
       <span class="src"><span>${esc(n.src)}</span><span>${esc(timeLabel(n.at))}</span></span>
       <b>${esc(n.t)}</b>${impactHTML(n)}</a>`).join("");
   $("#newsMore").hidden = list.length <= newsShown;
 }
 $("#newsFilter").addEventListener("click", e => { const b = e.target.closest("[data-nf]"); if (!b) return; newsFilter = b.dataset.nf; newsShown = 20; renderNews(); });
 $("#newsMore").addEventListener("click", () => { newsShown += 20; renderNews(); });
+$("#newsList").addEventListener("click", e => {
+  const a = e.target.closest("[data-ni]"); if (!a) return;
+  e.preventDefault(); openNews(NEWS.items[+a.dataset.ni]);
+});
+$("#menuNews").addEventListener("click", e => {
+  const a = e.target.closest("[data-ni]"); if (!a) return;
+  e.preventDefault(); closeMenu(); go("news"); openNews(NEWS.items[+a.dataset.ni]);
+});
+
+/* ============ opening a news item: inside Gyoukai, or via an iPhone Shortcut (Gyoukai / Comet) ============ */
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let newsPrefs = Object.assign({ mode: "app", name: "Gyoukaiニュース" }, store.get("newsPrefs", {}));
+const APP_URL = location.hostname.endsWith("github.io") ? location.origin + location.pathname : "https://weakestandstrongest-sketch.github.io/gyoukai/";
+const THEME_WHY = {
+  "円安": "円の価値が下がると、海外で稼ぐ輸出企業の売上は円に換算すると増え、輸入に頼る企業は仕入れコストが上がります。",
+  "円高": "円の価値が上がると、輸出企業の売上は円に換算すると目減りし、輸入に頼る企業はコストが下がります。",
+  "関税": "輸出先の関税が上がると、値上げするか利益を削るかが必要になり、輸出の多い企業の利益を圧迫します。",
+  "金利上昇": "金利が上がると銀行や保険は貸出・運用の利ざやが改善し、借入の多い不動産・建設には負担になります。",
+  "金利低下": "金利が下がると銀行の利ざやは縮み、借入の多い不動産などには追い風になります。",
+  "資源・燃料価格": "原油やLNGの価格は、燃料を使う航空・海運・化学・電力のコストに直結し、資源権益を持つ商社の利益には追い風になりえます。",
+  "AI投資": "AI向けの計算基盤への投資は、半導体・通信・電力・データセンター建設の需要を生みます。",
+  "インバウンド": "訪日客の増加は、航空・鉄道・小売の売上を押し上げます。",
+  "自然災害": "大きな災害は損害保険の支払いを増やし、復旧工事は建設会社の需要になります。",
+  "賃上げ": "賃上げは企業の人件費を増やす一方、消費を下支えします。",
+  "中国経済": "中国の景気は、現地で売る自動車・機械・化学・半導体の需要を左右します。"
+};
+const SIGN_WORD = { "+": "追い風", "-": "逆風", "~": "影響あり（向きは内容次第）" };
+function shortcutURL(url) {
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(newsPrefs.name)}&input=text&text=${encodeURIComponent(url)}`;
+}
+function openNews(n) {
+  if (!n) return;
+  if (newsPrefs.mode === "shortcut" && isIOS) { location.href = shortcutURL(n.url); return; }
+  openArticle(n);
+}
+function relatedCompanies(title) {
+  const hits = [];
+  INDUSTRIES.forEach(ind => ind.companies.forEach(c => {
+    const names = [c.short, c.name.replace(/（.*?）/g, "")].filter(x => x && x.length >= 2);
+    if (names.some(nm => title.includes(nm)) && !hits.some(h => h.c === c)) hits.push({ ind, c });
+  }));
+  return hits.slice(0, 4);
+}
+function openArticle(n) {
+  if (sv) closeViewer();
+  const rel = relatedCompanies(n.t || "");
+  const others = NEWS ? NEWS.items.filter(x => x !== n && n.main && (x.main === n.main)).slice(0, 4) : [];
+  const why = (n.themes || []).filter(t => THEME_WHY[t]).map(t => `<div><b>${esc(t)}</b>${esc(THEME_WHY[t])}</div>`);
+  const imp = Object.entries(n.impact || {}).map(([id, s]) => `<li><span class="tag">${SIGN_WORD[s]}</span><span>${esc(IND_NAME[id] || id)}</span></li>`).join("");
+  openSheet(`<span class="grabber" aria-hidden="true"></span>
+    <div class="sheet-head"><span class="eyebrow">Gyoukaiで読む</span><button data-close aria-label="閉じる">${ic("x")}</button></div>
+    <div class="article form">
+      <span class="src">${esc(n.src || "")}${n.at ? " · " + esc(timeLabel(n.at)) : ""}</span>
+      <h2>${esc(n.t || "記事")}</h2>
+      ${n.impact ? impactHTML(n, 12) : ""}
+      ${why.length ? `<div class="why">${why.join("")}</div>` : ""}
+      ${imp ? `<div><span class="eyebrow">影響が考えられる業界</span><ul style="margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px">${imp}</ul></div>` : ""}
+      ${rel.length ? `<div><span class="eyebrow">この記事に出てくる企業</span><div class="chips" style="margin-top:8px">${rel.map(r => `<button class="chip" data-rel="${r.ind.id}:${r.c.id}">${esc(r.c.short)}の説明 ${ic("arrow", "ic ic-sm")}</button>`).join("")}</div></div>` : ""}
+      <div class="actions">
+        <a class="btn" href="${esc(n.url)}" target="_blank" rel="noopener">元の記事を開く ${ic("ext", "ic ic-sm")}</a>
+        ${isIOS ? `<a class="btn ghost" href="${esc(shortcutURL(n.url))}">ショートカットで開く（Gyoukai／Comet）</a>` : ""}
+      </div>
+      ${others.length ? `<div class="rel"><span class="eyebrow">同じ業界のニュース</span>${others.map(o => `<a href="${esc(o.url)}" data-oi="${NEWS.items.indexOf(o)}"><b>${esc(o.t)}</b><span>${esc(o.src)} · ${esc(timeLabel(o.at))}</span></a>`).join("")}</div>` : ""}
+      <p class="note">影響業界は見出しのキーワードからの自動推定です。記事の本文は元の媒体で確認してください。</p>
+    </div>`, root => {
+    $$("[data-rel]", root).forEach(b => b.addEventListener("click", () => {
+      const [i, c] = b.dataset.rel.split(":"); closeSheet(); go("industry"); setMode("deep"); selectIndustry(i, c);
+    }));
+    $$("[data-oi]", root).forEach(a => a.addEventListener("click", e => { e.preventDefault(); openArticle(NEWS.items[+a.dataset.oi]); }));
+  });
+}
+function newsOpenLabel() { return newsPrefs.mode === "shortcut" ? "開き方：iPhoneショートカット（Gyoukai／Comet）" : "開き方：Gyoukaiで読む"; }
+function renderNewsOpen() {
+  $("#newsOpenBtn").innerHTML = `${ic("pen", "ic ic-sm")}${esc(newsOpenLabel())}`;
+  $("#menuNewsOpen").innerHTML = `<span class="t">${esc(newsOpenLabel())}</span><span class="d">タップして変更・ショートカットの作り方</span>`;
+}
+function openNewsSettings() {
+  const tmpl = `${APP_URL}?article=`;
+  openSheet(`<span class="grabber" aria-hidden="true"></span>
+    <div class="sheet-head"><h2 class="h2">ニュースの開き方</h2><button data-close aria-label="閉じる">${ic("x")}</button></div>
+    <div class="form">
+      <div class="seg wide" id="nmSeg" role="group" aria-label="開き方">
+        <button aria-pressed="${newsPrefs.mode === "app"}" data-nm="app">Gyoukaiで読む</button>
+        <button aria-pressed="${newsPrefs.mode === "shortcut"}" data-nm="shortcut">ショートカットで選ぶ</button>
+      </div>
+      <p class="note">「ショートカットで選ぶ」にすると、ニュースをタップしたときにiPhoneのショートカットが起動し、「Gyoukaiで開く」か「Cometで開く」を選べます。iPhone・iPadのみ。${isIOS ? "" : "この端末では「Gyoukaiで読む」で開きます。"}</p>
+      <div class="field"><label for="scName">ショートカットの名前</label><input class="input" id="scName" value="${esc(newsPrefs.name)}" maxlength="40"></div>
+      <div><span class="eyebrow">ショートカットの作り方（最初に1回だけ）</span>
+      <ol class="steps" style="margin-top:10px">
+        <li>「ショートカット」アプリを開き、右上の「＋」で新しいショートカットを作る。名前を上と同じ「<b>${esc(newsPrefs.name)}</b>」にする。</li>
+        <li>アクション「<b>メニューから選択</b>」を追加し、項目を「Gyoukaiで開く」「Cometで開く」の2つにする。</li>
+        <li>「Gyoukaiで開く」の中に、次の3つを順に入れる。
+          <br>①「<b>URLエンコード</b>」（対象：ショートカットの入力）
+          <br>②「<b>テキスト</b>」に下のURLを貼り、最後に①の「URLエンコードしたテキスト」を差し込む
+          <code class="codebox" id="tmplUrl">${esc(tmpl)}</code>
+          ③「<b>URLを開く</b>」（②のテキスト）</li>
+        <li>「Cometで開く」の中に、次の2つを入れる。
+          <br>①「<b>クリップボードにコピー</b>」（ショートカットの入力）
+          <br>②「<b>アプリを開く</b>」でCometを選ぶ → Cometのアドレスバーを長押しして「ペーストして移動」
+          <br><span class="muted">Cometをデフォルトのブラウザにしている場合や、ショートカットにCometの「URLを開く」アクションがある場合は、それを使えば直接開けます。</span></li>
+        <li>この画面で「ショートカットで選ぶ」をオンにする。</li>
+      </ol></div>
+      <button class="btn ghost sm" id="copyTmpl">URLをコピー</button>
+      ${isIOS ? `<a class="btn ghost sm" href="${esc(shortcutURL(APP_URL))}">ショートカットを試しに動かす</a>` : ""}
+      <p class="note">GyoukaiをSafariの「ホーム画面に追加」で使っている場合も、ショートカットから開くと記事画面が表示されます。</p>
+    </div>`, root => {
+    $("#nmSeg", root).addEventListener("click", e => {
+      const b = e.target.closest("[data-nm]"); if (!b) return;
+      newsPrefs.mode = b.dataset.nm; store.set("newsPrefs", newsPrefs);
+      $$("#nmSeg button", root).forEach(x => x.setAttribute("aria-pressed", x === b)); renderNewsOpen();
+      toast(newsPrefs.mode === "shortcut" ? "ニュースはショートカットで開きます" : "ニュースはGyoukaiで開きます");
+    });
+    $("#scName", root).addEventListener("change", e => { newsPrefs.name = e.target.value.trim() || "Gyoukaiニュース"; store.set("newsPrefs", newsPrefs); renderNewsOpen(); });
+    $("#copyTmpl", root).addEventListener("click", () => {
+      navigator.clipboard.writeText(tmpl).then(() => toast("URLをコピーしました")).catch(() => {
+        const r = document.createRange(); r.selectNodeContents($("#tmplUrl", root)); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast("URLを選択しました。コピーしてください");
+      });
+    });
+  });
+}
+$("#newsOpenBtn").addEventListener("click", openNewsSettings);
+$("#menuNewsOpen").addEventListener("click", () => { closeMenu(); go("news"); openNewsSettings(); });
 
 /* ============ bottom sheets: post & comments ============ */
 function openSheet(html, onMount) {
@@ -1456,7 +1604,7 @@ function listedInfo(code) {
   if (!LISTED || !code) return null;
   const r = LISTED.list.find(x => x[0] === code); if (!r) return null;
   const sector = (LISTED.sectors.find(s => s[0] === r[3]) || [])[1];
-  return { code: r[0], name: r[1], market: r[2], sector, sector17: r[4], scale: r[5] };
+  return { code: r[0], name: r[1], market: r[2], sector, sector17: r[4], scale: r[5], pref: r[6] || "", city: r[7] || "", fyEnd: r[8] || "" };
 }
 function curatedProfileHTML(ind, c, { closable = true } = {}) {
   const pk = ind.profitKey, sk = ind.sizeKey;
@@ -1647,7 +1795,7 @@ function openListedCompany(code) {
   openSheet(`<span class="grabber" aria-hidden="true"></span><div class="sheet-head"><span class="eyebrow">企業の説明</span><button data-close aria-label="閉じる">${ic("x")}</button></div>
     <div class="profile">
       <div class="pf-top"><span class="logo">${esc(li.name.slice(0, 1))}</span><div><b>${esc(li.name)}</b><span>証券コード ${esc(li.code)}</span></div></div>
-      <dl class="pf-meta"><dt>市場</dt><dd>${esc(li.market)}</dd><dt>業種（33）</dt><dd>${esc(li.sector)}</dd><dt>業種（17）</dt><dd>${esc(li.sector17)}</dd>${li.scale ? `<dt>規模</dt><dd>${esc(li.scale)}</dd>` : ""}</dl>
+      <dl class="pf-meta"><dt>市場</dt><dd>${esc(li.market)}</dd><dt>業種（33）</dt><dd>${esc(li.sector)}</dd><dt>業種（17）</dt><dd>${esc(li.sector17)}</dd>${li.scale ? `<dt>規模</dt><dd>${esc(li.scale)}</dd>` : ""}${li.pref ? `<dt>本社</dt><dd>${esc(li.pref + (li.city ? " " + li.city : ""))}</dd>` : ""}${li.fyEnd ? `<dt>決算日</dt><dd>${esc(li.fyEnd)}</dd>` : ""}</dl>
       <p>この企業の事業内容と決算データは、EDINET連携で今後自動追加する予定です。それまでは下のリンクから一次情報を確認できます。</p>
       ${linksHTML(li.code, li.name)}
       ${deep.length ? `<div class="chips">${deep.map(id => `<button class="chip" data-deep2="${id}">同じ業種の「${esc(findInd(id).name)}」を詳しく見る</button>`).join("")}</div>` : ""}
@@ -1707,15 +1855,21 @@ Object.values(REGION_COS).flat().forEach(c => {
   c.rev = lastVal(co[ind.sizeKey]); c.revLabel = ind.labels[ind.sizeKey]; c.fy = co.fy; c.code = co.code;
 });
 let regState = store.get("region", "tk");
+// every listed company that has a head-office prefecture (from the EDINET code list)
+const LISTED_BY_PREF = {};
+if (LISTED && LISTED.fields && LISTED.fields.includes("pref")) LISTED.list.forEach(r => { if (r[6]) (LISTED_BY_PREF[r[6]] = LISTED_BY_PREF[r[6]] || []).push(r); });
+const HAS_ADDR = Object.keys(LISTED_BY_PREF).length > 0;
+const regionListed = r => r.prefs.flatMap(p => LISTED_BY_PREF[p] || []);
+let regFilter = { pref: "all", sector: "all", q: "", shown: 60 };
 function renderMap() {
   const cs = 31, size = 28;
   const prefRegion = {}; REGIONS.forEach(r => r.prefs.forEach(p => prefRegion[p] = r.id));
-  const hasCo = new Set(Object.values(REGION_COS).flat().map(c => c.pref));
+  const hasCo = new Set(HAS_ADDR ? Object.keys(LISTED_BY_PREF) : Object.values(REGION_COS).flat().map(c => c.pref));
   const W = 13 * cs, H = 12 * cs;
   const tiles = TILES.map(([n, c, r, s = 1]) => {
     const x = c * cs, y = r * cs, w = s * cs - (cs - size);
     const lbl = s > 1 ? n : (n.length > 2 ? n.slice(0, 2) : n);
-    return `<g class="pref ${prefRegion[n] === regState ? "on" : ""}" data-r="${prefRegion[n]}"><title>${n}</title>
+    return `<g class="pref ${prefRegion[n] === regState ? "on" : ""}" data-r="${prefRegion[n]}" data-p="${n}"><title>${n}${HAS_ADDR ? `：上場企業 ${(LISTED_BY_PREF[n] || []).length}社` : ""}</title>
       <rect x="${x}" y="${y}" width="${w}" height="${w}" rx="${s > 1 ? 10 : 6}"/>
       <text x="${x + w / 2}" y="${y + w / 2}" ${s > 1 ? 'style="font-size:13px"' : ""}>${lbl}</text>
       ${hasCo.has(n) ? `<circle cx="${x + w - 5}" cy="${y + 5}" r="2.6"/>` : ""}</g>`;
@@ -1724,13 +1878,13 @@ function renderMap() {
   $("#jpMap").setAttribute("viewBox", `0 0 ${W} ${H}`);
   $("#jpMap").innerHTML = tiles +
     `<text class="rlabel" x="2" y="34" style="font-size:24px">${esc(sel.name)}</text>` +
-    `<text x="2" y="58" style="font-size:12px;fill:var(--ink-3)">${(REGION_COS[sel.id] || []).length}社を掲載</text>` +
-    `<circle cx="${2 * cs + 4}" cy="${11 * cs + 14}" r="3" fill="var(--ink)"/><text x="${2 * cs + 13}" y="${11 * cs + 14}" style="font-size:11px;fill:var(--ink-3);dominant-baseline:central">掲載企業の本社がある都道府県</text>`;
-  $("#regChips").innerHTML = REGIONS.map(r => `<button class="chip" aria-pressed="${r.id === regState}" data-r="${r.id}">${esc(r.name)}<span class="cnt">${(REGION_COS[r.id] || []).length}</span></button>`).join("");
+    `<text x="2" y="58" style="font-size:12px;fill:var(--ink-3)">${HAS_ADDR ? `上場企業 ${regionListed(sel).length.toLocaleString("ja-JP")}社` : `${(REGION_COS[sel.id] || []).length}社を掲載`}</text>` +
+    `<circle cx="${2 * cs + 4}" cy="${11 * cs + 14}" r="3" fill="var(--ink)"/><text x="${2 * cs + 13}" y="${11 * cs + 14}" style="font-size:11px;fill:var(--ink-3);dominant-baseline:central">${HAS_ADDR ? "上場企業の本社がある都道府県（タップで絞り込み）" : "掲載企業の本社がある都道府県"}</text>`;
+  $("#regChips").innerHTML = REGIONS.map(r => `<button class="chip" aria-pressed="${r.id === regState}" data-r="${r.id}">${esc(r.name)}<span class="cnt">${(HAS_ADDR ? regionListed(r).length : (REGION_COS[r.id] || []).length).toLocaleString("ja-JP")}</span></button>`).join("");
 }
 function renderRegionList() {
   const r = REGIONS.find(x => x.id === regState), list = REGION_COS[r.id] || [];
-  $("#regName").textContent = r.name + "に本社がある企業";
+  $("#regName").textContent = r.name + "の注目企業";
   $("#regCount").textContent = `${list.length}社`;
   const suffix = p => p === "北海道" ? "" : p === "東京" ? "都" : ["大阪", "京都"].includes(p) ? "府" : "県";
   $("#coList").innerHTML = list.map((c, i) => `<article class="co" style="animation-delay:${i * 40}ms">
@@ -1744,8 +1898,44 @@ function renderRegionList() {
     ${c.link ? `<button class="go" data-link="${c.link[0]}:${c.link[1]}">${esc(findInd(c.link[0]).name)}業界で比較 ${ic("arrow", "ic ic-sm")}</button>` : c.code ? `<button class="go" data-code="${esc(c.code)}">企業の説明を見る ${ic("arrow", "ic ic-sm")}</button>` : ""}
   </article>`).join("");
 }
-function selectRegion(id) { regState = id; store.set("region", id); renderMap(); renderRegionList(); }
-$("#jpMap").addEventListener("click", e => { const g = e.target.closest("[data-r]"); if (g) selectRegion(g.dataset.r); });
+function renderRegionAll() {
+  const box = $("#regAll");
+  const r = REGIONS.find(x => x.id === regState);
+  if (!HAS_ADDR) { box.innerHTML = `<div class="empty">この地方のすべての上場企業は、本社所在地のデータを取り込むと表示されます（GitHub Actionsが毎朝更新）。</div>`; return; }
+  const all = regionListed(r);
+  const prefCounts = r.prefs.map(p => [p, (LISTED_BY_PREF[p] || []).length]).filter(x => x[1]);
+  const inPref = all.filter(x => regFilter.pref === "all" || x[6] === regFilter.pref);
+  const secCounts = {}; inPref.forEach(x => secCounts[x[3]] = (secCounts[x[3]] || 0) + 1);
+  const nq = regFilter.q ? normq(regFilter.q) : "";
+  const list = inPref.filter(x => (regFilter.sector === "all" || x[3] === regFilter.sector) && (!nq || normq(x[1]).includes(nq) || x[0].startsWith(nq) || normq(x[7] || "").includes(nq)));
+  list.sort((a, b) => (CURATED_BY_CODE[b[0]] ? 1 : 0) - (CURATED_BY_CODE[a[0]] ? 1 : 0) || ({ "プライム": 0, "スタンダード": 1, "グロース": 2 }[a[2]] ?? 3) - ({ "プライム": 0, "スタンダード": 1, "グロース": 2 }[b[2]] ?? 3) || a[0].localeCompare(b[0]));
+  box.innerHTML = `<div class="reg-head"><h2 class="h2">${esc(r.name)}に本社がある上場企業</h2><span class="num">${all.length.toLocaleString("ja-JP")}社</span></div>
+    <div class="ind-nav" id="regPrefs">${[["all", all.length], ...prefCounts].map(([p, n]) => `<button class="chip" aria-pressed="${regFilter.pref === p}" data-pf="${p}">${p === "all" ? "すべて" : esc(p)}<span class="cnt">${n}</span></button>`).join("")}</div>
+    <div class="reg-tools"><div class="row">
+      <select class="input" id="regSector" aria-label="業種で絞り込む"><option value="all">すべての業種（${inPref.length}社）</option>${Object.entries(secCounts).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<option value="${c}" ${regFilter.sector === c ? "selected" : ""}>${esc(sectorName(c))}（${n}社）</option>`).join("")}</select>
+      <input class="input" id="regQ" type="search" placeholder="社名・市区町村で絞り込む" value="${esc(regFilter.q)}" aria-label="社名・市区町村で絞り込む">
+    </div></div>
+    <div class="co-rows">${list.slice(0, regFilter.shown).map(x => `<button class="co-row" data-code="${esc(x[0])}"><span class="code">${esc(x[0])}</span><span class="nm">${esc(x[1])}${CURATED_BY_CODE[x[0]] ? `<span class="star">決算あり</span>` : ""}<small>${esc(x[6] + (x[7] ? " " + x[7] : ""))} · ${esc(sectorName(x[3]))}</small></span><span class="mk">${esc(x[2])}</span></button>`).join("") || `<div class="empty">条件に合う企業はありません</div>`}</div>
+    ${list.length > regFilter.shown ? `<button class="btn ghost sm" id="regMore">さらに表示（残り${(list.length - regFilter.shown).toLocaleString("ja-JP")}社）</button>` : ""}
+    <p class="note">本社所在地：${esc(LISTED.addressSource || "EDINET")}（登記上の所在地）。上場企業一覧：${esc(LISTED.source)}。</p>`;
+}
+$("#regAll").addEventListener("click", e => {
+  const pf = e.target.closest("[data-pf]"); if (pf) { regFilter.pref = pf.dataset.pf; regFilter.sector = "all"; regFilter.shown = 60; renderRegionAll(); return; }
+  if (e.target.closest("#regMore")) { regFilter.shown += 120; renderRegionAll(); return; }
+  const r = e.target.closest("[data-code]"); if (r) openListedCompany(r.dataset.code);
+});
+$("#regAll").addEventListener("change", e => { if (e.target.id === "regSector") { regFilter.sector = e.target.value; regFilter.shown = 60; renderRegionAll(); } });
+let regQTimer;
+$("#regAll").addEventListener("input", e => {
+  if (e.target.id !== "regQ") return;
+  clearTimeout(regQTimer); regQTimer = setTimeout(() => { regFilter.q = e.target.value; regFilter.shown = 60; renderRegionAll(); const q = $("#regQ"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250);
+});
+function selectRegion(id, pref) {
+  if (id !== regState) regFilter = { pref: "all", sector: "all", q: "", shown: 60 };
+  if (pref) { regFilter.pref = (LISTED_BY_PREF[pref] || []).length ? pref : "all"; regFilter.sector = "all"; regFilter.shown = 60; }
+  regState = id; store.set("region", id); renderMap(); renderRegionList(); renderRegionAll();
+}
+$("#jpMap").addEventListener("click", e => { const g = e.target.closest("[data-r]"); if (g) selectRegion(g.dataset.r, g.dataset.p); });
 $("#regChips").addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (b) selectRegion(b.dataset.r); });
 $("#coList").addEventListener("click", e => {
   const b = e.target.closest("[data-link]");
@@ -1769,8 +1959,18 @@ setMode("deep");
 renderIndustry();
 renderMap();
 renderRegionList();
+renderRegionAll();
 $("#postBtn").addEventListener("click", openPost);
-go(location.hash.slice(1) || "home", { replace: true });
+renderNewsOpen();
+(function openFromShortcut() {
+  let art = null;
+  try { art = new URLSearchParams(location.search).get("article"); } catch (e) {}
+  if (!art) { go(location.hash.slice(1) || "home", { replace: true }); return; }
+  try { history.replaceState(null, "", location.pathname + "#news"); } catch (e) {}
+  go("news", { replace: true });
+  const n = NEWS && NEWS.items.find(x => x.url === art);
+  openArticle(n || { t: "ニュース記事", url: art, src: "" });
+})();
 </script>
 </body>
 </html>
