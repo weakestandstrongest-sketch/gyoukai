@@ -2,7 +2,12 @@ name: Update data
 
 on:
   schedule:
-    - cron: "40 20 * * *"   # 毎朝 5:40（日本時間）
+    # 日本時間 5:40 / 12:10 / 15:50 / 17:40 / 21:10（決算短信は15時以降に多く出る）
+    - cron: "40 20 * * *"
+    - cron: "10 3 * * *"
+    - cron: "50 6 * * *"
+    - cron: "40 8 * * *"
+    - cron: "10 12 * * *"
   workflow_dispatch:
   push:
     paths:
@@ -30,6 +35,12 @@ jobs:
         continue-on-error: true
       - name: 今日のニュース
         run: python scripts/build_news.py
+        continue-on-error: true
+      - name: 決算短信（TDnet）
+        run: python scripts/build_financials.py
+        continue-on-error: true
+      - name: 決算発表予定日
+        run: python scripts/build_calendar.py
         continue-on-error: true
       - name: 変更があればコミット
         run: |
