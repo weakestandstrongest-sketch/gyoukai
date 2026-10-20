@@ -18,6 +18,9 @@
 <script src="data/industries.js"></script>
 <script src="data/companies.js"></script>
 <script src="data/news.js"></script>
+<script src="data/financials.js"></script>
+<script src="data/calendar.js"></script>
+<script src="data/glossary.js"></script>
 <style>
 /* Layout: phone-first app (max 760px). Home is one still black-and-white illustration you can only swipe up from; color appears only in chart series. */
 :root {
@@ -677,6 +680,8 @@ function fmtOku(v) {
   if (v == null) return "—";
   const s = v < 0 ? "−" : "", a = Math.abs(v);
   if (a >= 10000) return s + (a / 10000).toFixed(a >= 100000 ? 1 : 2) + "兆円";
+  if (a < 1) return s + Math.round(a * 100).toLocaleString("ja-JP") + "百万円";
+  if (a < 100) return s + a.toFixed(1).replace(/\.0$/, "") + "億円";
   return s + Math.round(a).toLocaleString("ja-JP") + "億円";
 }
 function fmtAxis(v) {
@@ -854,6 +859,8 @@ const TABS = ["home", "news", "industry", "region"];
 const scrollMem = {};
 let current = null;
 function go(tab, { replace = false } = {}) {
+  if (window.GK && GK.PAGES.includes(tab)) { GK.openPage(tab); tab = current || "home"; return; }
+  if (window.GK) GK.closePage(true);
   if (!TABS.includes(tab)) tab = "home";
   if (current && current !== "home") scrollMem[current] = window.scrollY;
   TABS.forEach(t => { $("#view-" + t).hidden = t !== tab; });
@@ -864,7 +871,12 @@ function go(tab, { replace = false } = {}) {
   window.scrollTo(0, prev === tab ? 0 : (scrollMem[tab] || 0));
   if (tab === "industry") renderChart();
 }
-window.addEventListener("popstate", () => go(location.hash.slice(1), { replace: true }));
+window.addEventListener("popstate", () => {
+  const h = location.hash.slice(1);
+  if (window.GK && GK.PAGES.includes(h)) { GK.openPage(h, { fromPop: true }); return; }
+  if (window.GK) GK.closePage(true);
+  go(h, { replace: true });
+});
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-tab]"); if (t) go(t.dataset.tab);
 });
@@ -888,7 +900,13 @@ function renderHome() {
 }
 
 /* ============ dark menu (swipe up) ============ */
+const openPageLater = name => () => window.GK && GK.openPage(name);
 const MENU_NOW = [
+  ["yen", "全社の決算", "約3,700社の決算短信を自動で取り込み", openPageLater("results"), "results"],
+  ["bell", "決算アラート", "ウォッチ企業の新しい決算をお知らせ", openPageLater("alerts"), "alerts"],
+  ["calendar", "決算カレンダー", "決算発表の予定日と発表済みの決算", openPageLater("calendar"), "calendar"],
+  ["book", "財務指標の用語集", "ROE・自己資本比率などを例つきで解説", openPageLater("glossary"), "glossary"],
+  ["doc", "就活メモ・ES管理", "選考状況・締め切り・ESの下書き", openPageLater("notes"), "notes"],
   ["compare", "企業を比較する", "5年分の売上・利益をグラフで", () => { go("industry"); setMode("deep"); }],
   ["list", "全上場企業を探す", "33業種・約3,700社から検索", () => { go("industry"); setMode("all"); }],
   ["network", "業界相関図", "資本・提携・競合の関係を見る", () => { go("industry"); setMode("deep"); setTimeout(() => $("#net").scrollIntoView({ behavior: "smooth" }), 60); }],
@@ -897,11 +915,8 @@ const MENU_NOW = [
   ["pen", "ストーリーを投稿", "企業ニュースやメモを共有", () => { go("news"); openPost(); }]
 ];
 const MENU_SOON = [
-  ["yen", "全社の決算データ", "EDINET連携で約3,700社の業績を自動取得"],
-  ["bell", "決算アラート", "ウォッチ企業の決算発表を通知"],
-  ["calendar", "決算カレンダー", "業界ごとの発表スケジュール"],
-  ["book", "財務指標の用語集", "ROE・自己資本比率などを解説"],
-  ["doc", "就活メモ・ES管理", "企業ごとの研究ノート"]
+  ["chart", "5年分の業績・平均年収", "EDINET連携で有価証券報告書から自動取得（APIキーの登録が必要）"],
+  ["compare", "企業比較レポート", "選んだ企業を並べて比較・保存"]
 ];
 function spark(arr) {
   const pts0 = arr.map((v, i) => [i, v]).filter(p => p[1] != null);
@@ -912,7 +927,7 @@ function spark(arr) {
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${line}" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="#fff"/></svg>`;
 }
 function renderMenu() {
-  $("#menuNow").innerHTML = MENU_NOW.map((m, i) => `<button class="mi" data-mi="${i}">${ic(m[0])}<span><span class="t">${m[1]}</span><br><span class="d">${m[2]}</span></span></button>`).join("");
+  $("#menuNow").innerHTML = MENU_NOW.map((m, i) => `<button class="mi" data-mi="${i}" data-mi-name="${m[4] || ""}">${ic(m[0])}<span><span class="t">${m[1]}</span><br><span class="d">${m[2]}</span></span></button>`).join("");
   $("#menuSoon").innerHTML = MENU_SOON.map(m => `<button class="mi coming" data-soon="${m[1]}">${ic(m[0])}<span><span class="t">${m[1]}</span><br><span class="d">${m[2]}</span></span><span class="soon">COMING SOON</span></button>`).join("");
   $("#menuNow").addEventListener("click", e => { const b = e.target.closest("[data-mi]"); if (!b) return; closeMenu(); MENU_NOW[+b.dataset.mi][3](); });
   $("#menuSoon").addEventListener("click", e => { const b = e.target.closest("[data-soon]"); if (b) toast(`「${b.dataset.soon}」は今後追加予定です`); });
@@ -1620,8 +1635,10 @@ function curatedProfileHTML(ind, c, { closable = true } = {}) {
   return `<div class="profile">
     <div class="pf-top"><span class="logo">${esc(c.short.slice(0, 1))}</span><div><b>${esc(c.name)}</b><span>${esc([c.code, li && li.market, ind.name, c.hq].filter(Boolean).join(" · "))}</span></div>
       ${closable ? `<button class="x" id="pfClose" aria-label="説明を閉じる">${ic("x", "ic ic-sm")}</button>` : ""}</div>
+    ${window.GK ? GK.extrasHTML(c.code, c.name) : ""}
     <p>${esc(c.desc)}</p>
     <div class="pf-point"><b>ここに注目</b><p>${esc(c.point)}</p></div>
+    ${window.GK ? GK.finBlockHTML(c.code) : ""}
     <div class="pf-kpis">${kpi(ind.labels[sk] + "（" + c.fy + "）", c[sk])}${ind.metrics.length > 1 ? kpi(ind.labels[pk], c[pk]) : ""}${third}</div>
     ${rel.length ? `<ul>${rel.map(([t, a, b, txt]) => `<li><span class="tag">${EDGE_TYPES[t]}</span><span><b>${esc(nameOf(a === c.id ? b : a))}</b>：${esc(txt)}</span></li>`).join("")}</ul>` : ""}
     ${linksHTML(c.code, c.name)}
@@ -1796,7 +1813,8 @@ function openListedCompany(code) {
     <div class="profile">
       <div class="pf-top"><span class="logo">${esc(li.name.slice(0, 1))}</span><div><b>${esc(li.name)}</b><span>証券コード ${esc(li.code)}</span></div></div>
       <dl class="pf-meta"><dt>市場</dt><dd>${esc(li.market)}</dd><dt>業種（33）</dt><dd>${esc(li.sector)}</dd><dt>業種（17）</dt><dd>${esc(li.sector17)}</dd>${li.scale ? `<dt>規模</dt><dd>${esc(li.scale)}</dd>` : ""}${li.pref ? `<dt>本社</dt><dd>${esc(li.pref + (li.city ? " " + li.city : ""))}</dd>` : ""}${li.fyEnd ? `<dt>決算日</dt><dd>${esc(li.fyEnd)}</dd>` : ""}</dl>
-      <p>この企業の事業内容と決算データは、EDINET連携で今後自動追加する予定です。それまでは下のリンクから一次情報を確認できます。</p>
+      ${window.GK ? GK.extrasHTML(li.code, li.name) : ""}
+      ${window.GK && GK.hasFin(li.code) ? GK.finBlockHTML(li.code) : `<p>この企業の決算は、次に決算短信が出たときに自動で取り込まれます（東証の適時開示から1日5回更新）。それまでは下のリンクから一次情報を確認できます。</p>`}
       ${linksHTML(li.code, li.name)}
       ${deep.length ? `<div class="chips">${deep.map(id => `<button class="chip" data-deep2="${id}">同じ業種の「${esc(findInd(id).name)}」を詳しく見る</button>`).join("")}</div>` : ""}
     </div>`, root => {
@@ -1965,12 +1983,19 @@ renderNewsOpen();
 (function openFromShortcut() {
   let art = null;
   try { art = new URLSearchParams(location.search).get("article"); } catch (e) {}
-  if (!art) { go(location.hash.slice(1) || "home", { replace: true }); return; }
+  const h0 = location.hash.slice(1);
+  if (!art) {
+    go(TABS.includes(h0) ? h0 : "home", { replace: true });
+    // #alerts などの画面は js/features.js が開く
+    if (["alerts", "calendar", "results", "glossary", "notes"].includes(h0)) history.replaceState(null, "", "#" + h0);
+    return;
+  }
   try { history.replaceState(null, "", location.pathname + "#news"); } catch (e) {}
   go("news", { replace: true });
   const n = NEWS && NEWS.items.find(x => x.url === art);
   openArticle(n || { t: "ニュース記事", url: art, src: "" });
 })();
 </script>
+<script src="js/features.js"></script>
 </body>
 </html>

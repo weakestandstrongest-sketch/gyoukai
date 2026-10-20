@@ -11,6 +11,7 @@ import json
 import pathlib
 import re
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 import zipfile
@@ -21,15 +22,27 @@ BASE = "https://www.release.tdnet.info/inbs/"
 JST = datetime.timezone(datetime.timedelta(hours=9))
 UA = {"User-Agent": "Mozilla/5.0 (gyoukai-data-bot; +https://github.com/weakestandstrongest-sketch/gyoukai)"}
 MAX_ZIPS = 600          # 1回の実行で読むXBRLの上限
-RECENT_KEEP = 600       # 「決算速報」に残す件数
+RECENT_KEEP = 800       # 「決算速報」に残す件数
+VERSION = 2             # 読み取り方を変えたら上げる（全件を読み直す）
 
-# 勘定科目（サマリーの要素名）→ 項目
+# 勘定科目（サマリーの要素名）→ 項目。リストの前にあるものほど優先する
+SUFFIX = r"(IFRS|US|JMIS)?$"
 PATTERNS = {
-    "rev": re.compile(r"^(NetSales|Sales|Revenue|Revenues|OperatingRevenues?|GrossOperatingRevenues?|OrdinaryRevenues?|NetSalesOfCompletedConstructionContracts|TotalOperatingRevenues?)(IFRS|US|JMIS)?$"),
-    "op": re.compile(r"^(OperatingIncome|OperatingProfit)(IFRS|US|JMIS)?$"),
-    "ord": re.compile(r"^OrdinaryIncome$"),
-    "np": re.compile(r"^(ProfitAttributableToOwnersOfParent|NetIncomeAttributableToOwnersOfParent|NetIncome|Profit)(IFRS|US|JMIS)?$"),
+    "rev": [r"^NetSales", r"^Revenue", r"^Revenues", r"^Sales", r"^OperatingRevenues?", r"^TotalOperatingRevenues?",
+            r"^GrossOperatingRevenues?", r"^NetSalesOfCompletedConstructionContracts", r"^OrdinaryRevenues?"],
+    "op": [r"^OperatingIncome", r"^OperatingProfit"],
+    "ord": [r"^OrdinaryIncome"],
+    "np": [r"^ProfitAttributableToOwnersOfParent", r"^NetIncomeAttributableToOwnersOfParent", r"^NetIncome", r"^Profit"],
 }
+PATTERNS = {k: [re.compile(p + SUFFIX) for p in v] for k, v in PATTERNS.items()}
+
+
+def match_key(local):
+    for key, pats in PATTERNS.items():
+        for i, p in enumerate(pats):
+            if p.match(local):
+                return key, i
+    return None, None
 
 
 def get(url, tries=3):
@@ -87,10 +100,12 @@ def list_day(day):
 
 
 def is_earnings(title):
-    return "決算短信" in title and not any(w in title for w in ("訂正", "修正", "一部変更"))
+    title = unicodedata.normalize("NFKC", title)
+    return "決算短信" in title and not any(w in title for w in ("訂正", "修正", "一部変更", "REIT", "投資法人", "インフラファンド"))
 
 
 def period_of(title):
+    title = unicodedata.normalize("NFKC", title)
     m = re.search(r"(\d{4})年\s*(\d{1,2})月期", title)
     fy = f"{m.group(1)}年{int(m.group(2))}月期" if m else ""
     q = ""
@@ -113,7 +128,7 @@ def to_oku(raw, attrs):
     v *= 10 ** int(sc.group(1)) if sc else 1
     if re.search(r'sign="-"', attrs):
         v = -v
-    return round(v / 1e8, 1)
+    return round(v / 1e8, 2)  # 億円（小さい会社のため小数2桁＝百万円単位まで）
 
 
 def parse_summary(doc):
@@ -125,7 +140,7 @@ def parse_summary(doc):
         if not name or not ctx:
             continue
         local, ctx = name.group(1), ctx.group(1)
-        key = next((k for k, p in PATTERNS.items() if p.match(local)), None)
+        key, prio = match_key(local)
         if not key or "Upper" in ctx or "Lower" in ctx:
             continue
         val = to_oku(text(raw), attrs)
@@ -141,8 +156,8 @@ def parse_summary(doc):
                 continue
         else:
             continue
-        # 連結を優先し、同じ項目が複数あれば先に出たものを使う
-        rank = 0 if "NonConsolidated" not in ctx else 1
+        # 連結を優先し、次に科目の優先順位、同じなら先に出たものを使う
+        rank = (0 if "NonConsolidated" not in ctx else 1, prio)
         cur = facts.setdefault(slot, {}).get(key)
         if cur is None or rank < cur[1]:
             facts[slot][key] = (val, rank)
@@ -184,6 +199,8 @@ def load_previous():
 
 def main():
     prev = load_previous()
+    if prev.get("v") != VERSION:
+        prev = {"items": {}, "recent": []}  # 読み取り方が変わったので全件を読み直す
     items, recent = prev.get("items", {}), prev.get("recent", [])
     done = {r["zip"] for r in recent if r.get("zip")}
     today = datetime.datetime.now(JST).date()
@@ -216,6 +233,9 @@ def main():
         entry = {"p": fy, "q": q, "std": std, "d": r["date"], "t": r["time"], "url": r["pdf"]}
         if parsed:
             entry.update({k: v for k, v in parsed.get("cur", {}).items()})
+            if std != "日本基準":  # IFRS・米国基準には経常利益がない
+                entry.pop("ord", None)
+                parsed.get("prev", {}).pop("ord", None)
             if parsed.get("prev"):
                 entry["prev"] = parsed["prev"]
             if parsed.get("fc"):
@@ -237,6 +257,7 @@ def main():
         print("決算データを1件も取得できなかったため、ファイルを書き換えません")
         return
     data = {
+        "v": VERSION,
         "source": "東京証券取引所 適時開示情報（TDnet）の決算短信XBRL",
         "built": datetime.datetime.now(JST).isoformat(timespec="minutes"),
         "unit": "億円",
