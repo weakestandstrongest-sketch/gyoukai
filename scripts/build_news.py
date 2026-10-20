@@ -46,19 +46,22 @@ INDUSTRIES = {
 
 # 見出しに出てくるマクロ要因と、影響が考えられる業界（+ は追い風、- は逆風、~ はどちらもありうる）
 THEMES = [
-    (["円安"], "円安", {"auto": "+", "elec": "+", "machine": "+", "air": "-", "food": "-", "retail": "-", "energy": "-"}),
-    (["円高"], "円高", {"auto": "-", "elec": "-", "machine": "-", "air": "+", "food": "+", "retail": "+"}),
-    (["関税"], "関税", {"auto": "-", "steel": "-", "machine": "-", "elec": "-"}),
+    ([r"(?<![0-9０-９,，])円安"], "円安", {"auto": "+", "elec": "+", "machine": "+", "air": "-", "food": "-", "retail": "-", "energy": "-"}),
+    ([r"(?<![0-9０-９,，])円高"], "円高", {"auto": "-", "elec": "-", "machine": "-", "air": "+", "food": "+", "retail": "+"}),
+    (["関税"], "関税", {"auto": "-", "machine": "-", "elec": "-", "steel": "~"}),
     (["利上げ", "金利上昇", "長期金利"], "金利上昇", {"fin": "+", "insurance": "+", "realestate": "-", "construction": "-"}),
     (["利下げ", "金融緩和"], "金利低下", {"fin": "-", "realestate": "+"}),
     (["原油", "LNG", "ガソリン"], "資源・燃料価格", {"trade": "~", "air": "-", "shipping": "-", "chem": "-", "energy": "-"}),
-    (["生成AI", "データセンター"], "AI投資", {"semi": "+", "it": "+", "energy": "+", "construction": "+"}),
-    (["値上げ"], "値上げ", {"food": "~", "retail": "~"}),
+    (["データセンター", "AI投資", "AI需要", "AI半導体"], "AI投資", {"semi": "+", "it": "+", "energy": "+", "construction": "+"}),
     (["訪日", "インバウンド"], "インバウンド", {"air": "+", "rail": "+", "retail": "+"}),
     (["地震", "台風", "豪雨", "災害"], "自然災害", {"insurance": "-", "construction": "+"}),
     (["賃上げ", "最低賃金", "春闘"], "賃上げ", {"retail": "~", "food": "~"}),
     (["中国"], "中国経済", {"auto": "~", "machine": "~", "chem": "~", "semi": "~"}),
 ]
+
+# 国内の主要な経済媒体は少し優先する
+TRUSTED = ["日本経済新聞", "日経", "共同通信", "時事", "NHK", "ロイター", "Reuters", "ブルームバーグ", "Bloomberg", "日刊工業新聞", "ニュースイッチ",
+           "東洋経済", "ダイヤモンド", "株探", "朝日新聞", "読売新聞", "毎日新聞", "産経", "ITmedia", "Impress", "電波新聞", "物流ニュース", "日刊自動車新聞", "流通ニュース", "TBS", "テレ東"]
 
 EVENT_WORDS = ["決算", "上方修正", "下方修正", "最高益", "赤字", "黒字", "買収", "TOB", "統合", "再編", "提携", "撤退", "増産", "減産", "新工場", "値上げ", "関税", "利上げ", "円安", "円高", "規制", "受注", "業績予想"]
 
@@ -82,7 +85,12 @@ def fetch_rss(query):
         yield {"t": title, "src": source, "url": item.findtext("link") or "", "at": at}
 
 
+def hit(pattern, text):
+    return re.search(pattern, text) if pattern.startswith("(?") else pattern in text
+
+
 def norm(title):
+    title = re.sub(r"[（(][^（）()]{1,20}[）)]\s*$", "", title)  # 末尾の（ロイター）などを除いて重複判定
     return re.sub(r"[\s　「」『』（）()【】・、。!！?？:：\-—]", "", title)[:40]
 
 
@@ -110,7 +118,7 @@ def main():
         inds = [i for i, (_, _, words) in INDUSTRIES.items() if any(w in t for w in words)]
         themes, impact = [], {}
         for words, label, effects in THEMES:
-            if any(w in t for w in words):
+            if any(hit(w, t) for w in words):
                 themes.append(label)
                 for i, sign in effects.items():
                     impact.setdefault(i, sign)
@@ -119,7 +127,8 @@ def main():
         if not impact:
             continue
         events = [w for w in EVENT_WORDS if w in t]
-        score = len(events) * 2 + len(themes) * 2 + min(len(impact), 4)
+        trusted = any(n in it["src"] or n in t[-12:] for n in TRUSTED)
+        score = len(events) * 2 + len(themes) * 2 + min(len(inds), 3) + (3 if trusted else 0)
         out.append({
             "t": t, "src": it["src"], "url": it["url"],
             "at": it["at"].astimezone(JST).isoformat(timespec="minutes"),

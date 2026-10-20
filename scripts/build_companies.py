@@ -9,6 +9,7 @@ import io
 import json
 import pathlib
 import re
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -81,7 +82,7 @@ def main():
         scale = cell_str(v[col["規模区分"]])
         rows.append([
             cell_str(v[col["コード"]]),
-            cell_str(v[col["銘柄名"]]),
+            unicodedata.normalize("NFKC", cell_str(v[col["銘柄名"]])),
             market,
             s33,
             cell_str(v[col["17業種区分"]]),
@@ -93,7 +94,7 @@ def main():
         "source": "日本取引所グループ「東証上場銘柄一覧」",
         "asOf": as_of,
         "built": datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).isoformat(timespec="minutes"),
-        "sectors": [[k, sectors[k]] for k in sorted(sectors)],
+        "sectors": [[k, sectors[k]] for k in sorted(sectors, key=int)],
         "fields": ["code", "name", "market", "sector33", "sector17", "scale"],
         "list": rows,
     }
