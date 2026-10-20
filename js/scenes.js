@@ -102,7 +102,7 @@ window.GK_SCENES = [
   <path class="ln fw" d="M70 54L200 -6L330 54Z"/>
   <circle class="fk" cx="200" cy="32" r="12"/><text class="tw" x="200" y="37" text-anchor="middle" font-size="13">¥</text>
   <rect class="fk" x="70" y="54" width="260" height="18"/>
-  ${[96, 142, 188, 234, 280].map(x => `<rect class="ln fw" x="${x}" y="72" width="24" height="132"/><path class="ln" d="M${x + 8} 80v116M${x + 16} 80v116" style="stroke-width:1.2"/>`).join("")}
+  ${[90, 130, 170, 210, 250, 290].map(x => `<rect class="ln fw" x="${x}" y="72" width="20" height="132"/><path class="ln" d="M${x + 7} 80v116M${x + 13} 80v116" style="stroke-width:1.2"/>`).join("")}
   <rect class="ln fw" x="62" y="204" width="276" height="14"/><rect class="ln fw" x="50" y="218" width="300" height="14"/>
   <path class="ln" d="M0 250H400"/>
   <g>${[0, 1, 2, 3, 4].map(i => `<ellipse class="ln fw" cx="96" cy="${300 - i * 9}" rx="22" ry="6"/>`).join("")}${[0, 1, 2].map(i => `<ellipse class="ln fw" cx="146" cy="${300 - i * 9}" rx="22" ry="6"/>`).join("")}${[0, 1, 2, 3, 4, 5, 6].map(i => `<ellipse class="${i === 6 ? "fk" : "ln fw"}" cx="300" cy="${300 - i * 9}" rx="22" ry="6"/>`).join("")}</g>
