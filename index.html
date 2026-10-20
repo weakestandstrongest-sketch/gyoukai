@@ -5,28 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gyoukai</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="決算データ・業界相関図・地域別企業から企業を読む、業界分析アプリのプロトタイプ">
-<meta name="theme-color" content="#f2f3f5" media="(prefers-color-scheme: light)">
+<meta name="description" content="決算データ・業界相関図・全上場企業・毎日の業界ニュースから企業を読む、業界研究アプリ">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gyoukai">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="data/industries.js"></script>
+<script src="data/companies.js"></script>
+<script src="data/news.js"></script>
 <style>
-/* Layout: one-column phone app (max 760px) with a floating glass tab bar; monochrome ink on cool paper, color only for chart series. */
+/* Layout: phone-first app (max 760px). Home is one still black-and-white illustration you can only swipe up from; color appears only in chart series. */
 :root {
   --bg: #f2f3f5;
   --surface: #ffffff;
+  --paper: #ffffff;
   --ink: #0e0f12;
   --ink-2: #555a63;
   --ink-3: #8b9099;
   --line: #e2e4e8;
   --tile: #d9dce2;
   --tile-hover: #c3c7cf;
-  --glass: rgba(255, 255, 255, 0.72);
+  --glass: rgba(255, 255, 255, 0.74);
   --glass-line: rgba(14, 15, 18, 0.08);
   --shadow: 0 10px 30px rgba(14, 15, 18, 0.10);
   --up: #12804a;
@@ -34,7 +38,6 @@
   --il-bg: #e6e8ec;
   --il-1: #0e0f12;
   --il-2: #a6abb4;
-  --il-3: #ffffff;
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
   --font-display: "Archivo", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
   --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
@@ -45,21 +48,21 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0c0d10; --surface: #17181c; --ink: #f2f3f5; --ink-2: #b4b8c0; --ink-3: #7f848e;
+    --bg: #0c0d10; --surface: #17181c; --paper: #0c0d10; --ink: #f2f3f5; --ink-2: #b4b8c0; --ink-3: #7f848e;
     --line: #2a2c32; --tile: #2c2f36; --tile-hover: #3e424b;
-    --glass: rgba(30, 31, 36, 0.72); --glass-line: rgba(255, 255, 255, 0.08); --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --glass: rgba(30, 31, 36, 0.74); --glass-line: rgba(255, 255, 255, 0.08); --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
     --up: #3fbf7f; --down: #f06a6f;
-    --il-bg: #22252b; --il-1: #f2f3f5; --il-2: #5b616c; --il-3: #0c0d10;
+    --il-bg: #22252b; --il-1: #f2f3f5; --il-2: #5b616c;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0c0d10; --surface: #17181c; --ink: #f2f3f5; --ink-2: #b4b8c0; --ink-3: #7f848e;
+  --bg: #0c0d10; --surface: #17181c; --paper: #0c0d10; --ink: #f2f3f5; --ink-2: #b4b8c0; --ink-3: #7f848e;
   --line: #2a2c32; --tile: #2c2f36; --tile-hover: #3e424b;
-  --glass: rgba(30, 31, 36, 0.72); --glass-line: rgba(255, 255, 255, 0.08); --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --glass: rgba(30, 31, 36, 0.74); --glass-line: rgba(255, 255, 255, 0.08); --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   --up: #3fbf7f; --down: #f06a6f;
-  --il-bg: #22252b; --il-1: #f2f3f5; --il-2: #5b616c; --il-3: #0c0d10;
+  --il-bg: #22252b; --il-1: #f2f3f5; --il-2: #5b616c;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
   color-scheme: dark;
 }
@@ -78,10 +81,13 @@ body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
-body.locked { overflow: hidden; }
+body.locked, body.on-home { overflow: hidden; }
+body.on-home { background: var(--paper); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+body.on-home::before { background: var(--paper); }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
+a { color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
 img, svg { max-width: 100%; }
 .num { font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
@@ -93,14 +99,13 @@ img, svg { max-width: 100%; }
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(var(--nav-h) + 48px + env(safe-area-inset-bottom, 0px));
 }
-.view { display: block; }
-.view-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.view-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase; }
-.h1 { font-family: var(--font-body); font-weight: 900; font-size: clamp(30px, 8vw, 40px); line-height: 1.15; margin: 4px 0 0; letter-spacing: -0.01em; text-wrap: balance; }
-.h2 { font-weight: 900; font-size: 20px; margin: 0; letter-spacing: 0; text-wrap: balance; }
+.h1 { font-weight: 900; font-size: clamp(30px, 8vw, 40px); line-height: 1.15; margin: 4px 0 0; text-wrap: balance; }
+.h2 { font-weight: 900; font-size: 20px; margin: 0; text-wrap: balance; }
 .sub { color: var(--ink-2); font-size: 13px; margin: 2px 0 0; }
-.section { display: grid; gap: 14px; margin-top: 32px; }
-.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.section { display: grid; gap: 14px; margin-top: 30px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .link { font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
 .ic { width: 22px; height: 22px; flex: none; }
 .ic-sm { width: 16px; height: 16px; }
@@ -111,18 +116,27 @@ img, svg { max-width: 100%; }
 .hscroll { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: max(16px, env(safe-area-inset-left, 0px)); scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding-inline: max(16px, env(safe-area-inset-left, 0px)); padding-bottom: 4px; }
 .hscroll::-webkit-scrollbar { display: none; }
 .hscroll > * { scroll-snap-align: start; }
+.disclaimer { margin-top: 28px; }
 
 /* chips & segmented */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 700; border: 1px solid var(--line); transition: background .15s, color .15s; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 700; border: 1px solid var(--line); transition: background .15s, color .15s; white-space: nowrap; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.chip.cochip[aria-pressed="false"] { color: var(--ink-3); }
-.chip.cochip[aria-pressed="false"] .dot { opacity: .35; }
-.chip.cochip[aria-pressed="true"] { background: var(--surface); color: var(--ink); border-color: var(--ink); }
-.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
-.seg button { height: 32px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.chip.cochip[aria-pressed="true"] { background: var(--surface); color: var(--ink); border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.chip .cnt { font-weight: 500; color: var(--ink-3); font-family: var(--font-display); }
+.chip[aria-pressed="true"] .cnt { color: inherit; opacity: .7; }
+.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--line); border-radius: 999px; padding: 3px; gap: 2px; max-width: 100%; }
+.seg button { min-height: 32px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seg.wide { display: grid; width: 100%; }
+.seg.wide button { min-height: 40px; font-size: 14px; padding: 0 8px; white-space: normal; line-height: 1.3; }
+.input { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-sm); padding: 11px 12px; font-size: 16px; }
+textarea.input { resize: vertical; min-height: 96px; line-height: 1.6; }
+.input:focus { outline: 2px solid var(--ink); outline-offset: 0; }
+.search { position: relative; }
+.search .ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+.search .input { padding-left: 40px; border-radius: 999px; }
 
 /* tab bar */
 .tabbar {
@@ -140,75 +154,88 @@ img, svg { max-width: 100%; }
   box-shadow: var(--shadow);
 }
 .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 22px; font-size: 11px; font-weight: 700; color: var(--ink-2); transition: background .2s, color .2s; }
-.tab .ic { width: 22px; height: 22px; }
 .tab[aria-current="page"] { background: var(--ink); color: var(--bg); }
 
-/* home */
-.hero { position: relative; overflow: hidden; border-radius: var(--r-lg); background: var(--ink); color: var(--bg); padding: 22px 20px 20px; min-height: 220px; display: grid; align-content: end; gap: 6px; }
-.hero svg.hero-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-.hero > :not(svg) { position: relative; }
-.hero .big { font-weight: 900; font-size: clamp(28px, 7.6vw, 38px); line-height: 1.2; margin: 0; text-wrap: balance; }
-.hero .stats { display: flex; gap: 18px; font-size: 12px; opacity: .8; }
-.hero .stats b { font-family: var(--font-display); font-size: 18px; margin-right: 2px; }
-.watch { min-width: 200px; flex: 0 0 200px; background: var(--surface); border-radius: var(--r-md); padding: 14px; display: grid; gap: 6px; text-align: left; }
-.watch .name { font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
-.watch .val { font-size: 24px; font-weight: 800; line-height: 1.1; }
-.watch .yoy { font-size: 12px; font-weight: 700; }
-.watch svg { width: 100%; height: 36px; }
-.ind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.ind-tile { background: var(--surface); border-radius: var(--r-md); padding: 14px; text-align: left; display: grid; gap: 2px; min-height: 96px; align-content: space-between; transition: transform .15s; }
-.ind-tile:active { transform: scale(.98); }
-.ind-tile .t { font-weight: 900; font-size: 16px; }
-.ind-tile .m { font-size: 12px; color: var(--ink-3); }
-.ind-tile .v { font-size: 18px; font-weight: 800; }
-.term { background: var(--surface); border-radius: var(--r-lg); padding: 18px; display: grid; gap: 6px; }
-.term .w { font-weight: 900; font-size: 22px; }
-.term .formula { font-family: var(--font-display); font-size: 13px; background: var(--bg); border-radius: var(--r-sm); padding: 8px 10px; color: var(--ink-2); }
-.region-teaser { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; background: var(--surface); border-radius: var(--r-lg); padding: 18px; text-align: left; width: 100%; }
-.region-teaser svg { width: 110px; height: auto; }
-
-.pull {
-  position: fixed; z-index: 45;
-  left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--nav-h) + 22px + env(safe-area-inset-bottom, 0px));
-  display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px 0 10px;
-  border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 700;
-  box-shadow: var(--shadow); touch-action: none;
+/* HOME: one picture, swipe up only */
+#view-home {
+  position: fixed; inset: 0; z-index: 1;
+  background: var(--paper);
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  overflow: hidden;
 }
-.pull .ic { width: 18px; height: 18px; animation: nudge 2.4s ease-in-out infinite; }
+.home {
+  height: 100%; max-width: 640px; margin: 0 auto;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+  padding-block: calc(env(safe-area-inset-top, 0px) + 28px) calc(var(--nav-h) + 30px + env(safe-area-inset-bottom, 0px));
+  transition: transform .5s cubic-bezier(.2,.8,.2,1);
+}
+.home-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.home-title h1 { font-family: var(--font-display); font-weight: 900; font-size: clamp(44px, 13vw, 60px); line-height: .95; letter-spacing: -0.03em; margin: 0; }
+.home-title p { margin: 8px 0 0; font-weight: 700; font-size: 14px; }
+.home-title .date { font-family: var(--font-display); font-weight: 700; font-size: 13px; text-align: right; line-height: 1.3; padding-top: 6px; }
+.home-art { display: grid; place-items: center; min-height: 0; padding: 8px 0; }
+.home-art svg { width: 100%; height: 100%; max-height: 520px; }
+.home-art .ln { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.home-art .fw { fill: var(--paper); }
+.home-art .fk { fill: var(--ink); }
+.home-art .tw { fill: var(--paper); font-family: var(--font-body); font-weight: 900; }
+.home-art .tk { fill: var(--ink); font-family: var(--font-body); font-weight: 900; }
+.home-art .smoke { animation: drift 6s ease-in-out infinite; }
+.home-art .steam { animation: rise 3.6s ease-in-out infinite; }
+@keyframes drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+@keyframes rise { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-4px); opacity: .55; } }
+.home-info { display: grid; gap: 4px; padding: 6px 0 18px; }
+.home-info .l { font-size: 13px; font-weight: 700; }
+.home-info .big { font-family: var(--font-display); font-weight: 900; font-size: clamp(38px, 11vw, 52px); line-height: 1.05; letter-spacing: -0.02em; }
+.home-info .big small { font-family: var(--font-body); font-size: 18px; font-weight: 900; margin-left: 4px; letter-spacing: 0; }
+.home-info .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.pull { justify-self: center; display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 28px; border-radius: 999px; background: var(--ink); color: var(--paper); font-weight: 900; font-size: 15px; letter-spacing: .02em; }
+.pull .ic { width: 20px; height: 20px; animation: nudge 2.4s ease-in-out infinite; }
 @keyframes nudge { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
 
-/* dark menu sheet (always black, by spec) */
+/* dark function menu (always black, by spec) */
 .menu {
   position: fixed; inset: 0; z-index: 60;
   background: #000; color: #fff;
   transform: translateY(100%);
   transition: transform .5s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .5s;
-  overflow-y: auto; overscroll-behavior: contain;
-  visibility: hidden;
+  overflow-y: auto; overscroll-behavior: contain; visibility: hidden;
+  --surface: #141518; --line: #26282d; --ink: #fff; --ink-2: #c9ccd2; --ink-3: #8a8f99; --bg: #000; --up: #3fbf7f; --down: #f06a6f;
 }
 .menu.open { transform: translateY(0); visibility: visible; transition: transform .5s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
 .menu.dragging { transition: none; visibility: visible; }
 .menu-inner { max-width: 760px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); padding-block: calc(env(safe-area-inset-top, 0px) + 10px) calc(40px + env(safe-area-inset-bottom, 0px)); }
 .grabber { display: block; width: 44px; height: 5px; border-radius: 3px; background: #444; margin: 6px auto 18px; }
 .menu-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.menu .eyebrow { color: #8a8f99; }
 .menu h2 { font-weight: 900; font-size: clamp(34px, 9vw, 48px); line-height: 1.1; margin: 6px 0 4px; }
-.menu .lead { color: #a7abb3; font-size: 13px; margin: 0 0 26px; }
+.menu .lead { color: #a7abb3; font-size: 13px; margin: 0; }
 .close-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #1c1d21; color: #fff; }
 .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.mi { background: #141518; border: 1px solid #26282d; border-radius: var(--r-md); padding: 16px; text-align: left; display: grid; gap: 10px; min-height: 128px; align-content: space-between; color: #fff; transition: background .15s; }
+.mi { background: #141518; border: 1px solid #26282d; border-radius: var(--r-md); padding: 16px; text-align: left; display: grid; gap: 10px; min-height: 120px; align-content: space-between; color: #fff; transition: background .15s; }
 .mi:hover { background: #1c1d21; }
 .mi .t { font-weight: 900; font-size: 15px; }
 .mi .d { font-size: 12px; color: #a7abb3; line-height: 1.5; }
 .mi .soon { justify-self: start; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; border: 1px solid #555; color: #c9ccd2; border-radius: 999px; padding: 2px 8px; }
 .mi.coming { border-style: dashed; }
 .menu-section { margin: 28px 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #8a8f99; }
+.watch { min-width: 190px; flex: 0 0 190px; background: #141518; border: 1px solid #26282d; border-radius: var(--r-md); padding: 14px; display: grid; gap: 6px; text-align: left; color: #fff; }
+.watch .name { font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.watch .val { font-size: 22px; font-weight: 800; line-height: 1.1; }
+.watch .yoy { font-size: 12px; font-weight: 700; }
+.watch svg { width: 100%; height: 34px; }
+.headline { display: grid; gap: 4px; padding: 14px 0; border-top: 1px solid #26282d; text-decoration: none; }
+.headline b { font-size: 15px; line-height: 1.5; }
+.headline span { font-size: 12px; color: #8a8f99; }
+.term { background: #141518; border: 1px solid #26282d; border-radius: var(--r-lg); padding: 18px; display: grid; gap: 6px; }
+.term .w { font-weight: 900; font-size: 22px; }
+.term .formula { font-family: var(--font-display); font-size: 13px; background: #000; border-radius: var(--r-sm); padding: 8px 10px; color: #c9ccd2; }
 
 /* news: stories */
 .stories { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 4px max(16px, env(safe-area-inset-left, 0px)) 6px; }
 .stories::-webkit-scrollbar { display: none; }
-.story { flex: none; width: 72px; display: grid; justify-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; }
+.story { flex: none; width: 72px; display: grid; justify-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.3; }
 .ring { width: 68px; height: 68px; border-radius: 50%; padding: 3px; background: var(--ink); display: grid; }
 .ring.seen { background: var(--tile); }
 .ring > span { border-radius: 50%; background: var(--surface); border: 3px solid var(--bg); display: grid; place-items: center; overflow: hidden; font-weight: 900; font-size: 15px; }
@@ -216,6 +243,16 @@ img, svg { max-width: 100%; }
 .ring.add { background: none; border: 2px dashed var(--ink-3); padding: 0; }
 .ring.add > span { border: 0; background: transparent; }
 .ring.add > span svg.ic { width: 26px; height: 26px; }
+.news-list { display: grid; gap: 10px; }
+.news { background: var(--surface); border-radius: var(--r-md); padding: 14px 16px; display: grid; gap: 8px; text-decoration: none; color: inherit; }
+.news .src { font-size: 11.5px; color: var(--ink-3); font-weight: 700; display: flex; gap: 8px; flex-wrap: wrap; }
+.news b { font-size: 15.5px; line-height: 1.5; font-weight: 900; }
+.news:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.imp { display: flex; flex-wrap: wrap; gap: 6px; }
+.imp span { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; border: 1px solid var(--line); background: var(--bg); display: inline-flex; gap: 4px; align-items: center; }
+.imp span i { font-style: normal; font-family: var(--font-display); font-weight: 800; }
+.imp .p i { color: var(--up); } .imp .m i { color: var(--down); } .imp .n i { color: var(--ink-3); }
+.imp .theme { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .feed { display: grid; gap: 18px; }
 .post { background: var(--surface); border-radius: var(--r-lg); overflow: hidden; }
 .post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
@@ -234,8 +271,7 @@ img, svg { max-width: 100%; }
 .act { display: inline-flex; align-items: center; gap: 6px; height: 36px; font-size: 13px; font-weight: 700; }
 .act .ic { width: 26px; height: 26px; }
 .act[aria-pressed="true"].like { color: var(--down); }
-.act[aria-pressed="true"].like .ic path { fill: currentColor; }
-.act[aria-pressed="true"].save .ic path { fill: currentColor; }
+.act[aria-pressed="true"].like .ic path, .act[aria-pressed="true"].save .ic path { fill: currentColor; }
 .post-body { padding: 6px 14px 16px; display: grid; gap: 6px; }
 .post-body .likes { font-size: 13px; font-weight: 700; }
 .post-body h3 { margin: 0; font-size: 17px; font-weight: 900; line-height: 1.4; text-wrap: balance; }
@@ -248,14 +284,14 @@ img, svg { max-width: 100%; }
 .kpi b { font-family: var(--font-display); font-size: 15px; margin-left: 4px; }
 
 /* story viewer */
-.viewer { position: fixed; inset: 0; z-index: 80; background: #000; color: #fff; display: block; touch-action: none; user-select: none; -webkit-user-select: none;
-  --il-bg: #1a1b1f; --il-1: #ffffff; --il-2: #4a4e57; --il-3: #000000; }
+.viewer { position: fixed; inset: 0; z-index: 80; background: #000; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none;
+  --il-bg: #1a1b1f; --il-1: #ffffff; --il-2: #4a4e57; }
 .viewer-inner { width: 100%; max-width: 520px; margin: 0 auto; display: grid; grid-template-rows: auto auto 1fr; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); padding-block: calc(env(safe-area-inset-top, 0px) + 10px) calc(20px + env(safe-area-inset-bottom, 0px)); height: 100%; position: relative; }
 .bars { display: flex; gap: 4px; }
 .bars span { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
 .bars span i { display: block; height: 100%; width: 0; background: #fff; }
 .bars span.done i { width: 100%; }
-.bars span.cur i { animation: fill var(--dur, 5s) linear forwards; }
+.bars span.cur i { animation: fill var(--dur, 6s) linear forwards; }
 .viewer.paused .bars span.cur i { animation-play-state: paused; }
 @keyframes fill { to { width: 100%; } }
 .viewer-head { display: flex; align-items: center; gap: 10px; padding: 12px 0; position: relative; z-index: 2; }
@@ -266,12 +302,16 @@ img, svg { max-width: 100%; }
 .viewer-head .sp { flex: 1; }
 .viewer-head button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; }
 .slide { display: grid; align-content: start; gap: 14px; overflow: hidden; }
-.slide-media { aspect-ratio: 1 / 1; max-height: 52vh; width: 100%; border-radius: var(--r-lg); overflow: hidden; background: #1a1b1f; justify-self: center; max-width: 100%; }
+.slide-media { aspect-ratio: 1 / 1; max-height: 46vh; width: 100%; border-radius: var(--r-lg); overflow: hidden; background: #1a1b1f; justify-self: center; max-width: 100%; }
 .slide-media svg, .slide-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.slide .k { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #a7abb3; }
-.slide h3 { margin: 0; font-size: 22px; font-weight: 900; line-height: 1.35; text-wrap: balance; }
+.slide .k { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #a7abb3; }
+.slide h3 { margin: 0; font-size: 21px; font-weight: 900; line-height: 1.4; text-wrap: balance; }
 .slide p { margin: 0; font-size: 15px; color: #d5d8de; line-height: 1.75; }
-.slide .del { justify-self: start; display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #ff9a9e; border: 1px solid #5a2a2d; border-radius: 999px; padding: 6px 12px; position: relative; z-index: 3; }
+.slide .imp span { background: #1a1b1f; border-color: #333; color: #fff; }
+.slide .imp .theme { background: #fff; color: #000; }
+.slide .open, .slide .del { justify-self: start; display: inline-flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 8px 14px; position: relative; z-index: 3; text-decoration: none; }
+.slide .open { background: #fff; color: #000; }
+.slide .del { color: #ff9a9e; border: 1px solid #5a2a2d; }
 .tapzone { position: absolute; top: 70px; bottom: 0; z-index: 1; }
 .tapzone.l { left: 0; width: 33%; } .tapzone.r { right: 0; width: 67%; }
 .viewer .hint { position: absolute; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; font-size: 11px; color: #6c707a; pointer-events: none; }
@@ -283,56 +323,53 @@ img, svg { max-width: 100%; }
 @media (min-width: 700px) { .scrim { align-items: center; } .sheet { border-radius: 26px; } }
 @keyframes up { from { transform: translateY(40px); opacity: .5; } }
 .sheet .grabber { background: var(--tile); margin-bottom: 12px; }
-.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.sheet-head button { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--bg); }
+.sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sheet-head button { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--bg); flex: none; }
 .form { display: grid; gap: 14px; }
 .field { display: grid; gap: 6px; }
 .field label, .field .lbl { font-size: 12px; font-weight: 700; color: var(--ink-2); }
-.input { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: var(--r-sm); padding: 11px 12px; font-size: 16px; }
-textarea.input { resize: vertical; min-height: 96px; line-height: 1.6; }
-.input:focus { outline: 2px solid var(--ink); outline-offset: 0; }
 .upload { display: grid; place-items: center; gap: 6px; border: 2px dashed var(--line); border-radius: var(--r-md); padding: 18px; color: var(--ink-3); font-size: 13px; cursor: pointer; text-align: center; }
 .upload img { max-height: 180px; border-radius: var(--r-sm); }
-.btn { height: 50px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 900; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 22px; }
-.btn.ghost { background: var(--bg); color: var(--ink); }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn { min-height: 50px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 900; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 22px; text-decoration: none; }
+.btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn.sm { min-height: 40px; font-size: 13px; padding: 0 16px; justify-self: start; }
 .counter { font-size: 11px; color: var(--ink-3); justify-self: end; }
 .comments { display: grid; gap: 12px; margin-bottom: 14px; }
 .comment { display: grid; grid-template-columns: 32px 1fr; gap: 10px; font-size: 14px; }
 .comment .logo { width: 32px; height: 32px; font-size: 12px; }
 .comment time { display: block; font-size: 11px; color: var(--ink-3); }
 .cform { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-.cform .btn { height: 46px; padding: 0 16px; }
+.cform .btn { min-height: 46px; padding: 0 16px; }
 
 /* industry */
 .ind-nav { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 2px max(16px, env(safe-area-inset-left, 0px)) 4px; }
 .ind-nav::-webkit-scrollbar { display: none; }
 .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.stat { background: var(--surface); border-radius: var(--r-md); padding: 14px; display: grid; gap: 2px; min-width: 0; }
+.stat { background: var(--surface); border-radius: var(--r-md); padding: 14px; display: grid; gap: 2px; min-width: 0; align-content: start; }
 .stat .l { font-size: 11.5px; color: var(--ink-3); font-weight: 700; }
 .stat .v { font-size: clamp(18px, 5vw, 24px); font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
 .stat .s { font-size: 11.5px; color: var(--ink-2); }
 @media (max-width: 430px) { .summary { grid-template-columns: 1fr 1fr; } .summary .stat:last-child { grid-column: span 2; } }
-.controls { display: grid; gap: 10px; }
-.chart-box { position: relative; height: 290px; }
-.chart-box canvas { max-width: 100%; }
+.controls { display: grid; gap: 12px; }
+.chart-box { position: relative; height: 280px; }
 .chart-fallback { display: grid; place-items: center; height: 100%; color: var(--ink-3); font-size: 13px; text-align: center; padding: 20px; }
 .table-wrap { overflow-x: auto; border-radius: var(--r-md); }
 table.fin { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; background: var(--surface); }
 table.fin th, table.fin td { padding: 10px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
 table.fin th { font-size: 11.5px; color: var(--ink-3); font-weight: 700; }
 table.fin th:first-child, table.fin td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
-table.fin td:first-child { font-weight: 700; }
 table.fin td { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
-table.fin td:first-child { font-family: var(--font-body); }
+table.fin td:first-child { font-family: var(--font-body); font-weight: 700; }
+table.fin tbody tr { cursor: pointer; }
+table.fin tbody tr:hover td, table.fin tbody tr.sel td { background: var(--bg); }
 table.fin td .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
 table.fin tr:last-child td { border-bottom: 0; }
 table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 .share { display: grid; gap: 10px; }
-.share-row { display: grid; grid-template-columns: 92px 1fr 54px; gap: 10px; align-items: center; font-size: 13px; }
+.share-row { display: grid; grid-template-columns: 92px 1fr 54px; gap: 10px; align-items: center; font-size: 13px; text-align: left; }
 .share-row .n { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .share-row .track { height: 14px; background: var(--bg); border-radius: 4px; overflow: hidden; }
-.share-row .bar { height: 100%; border-radius: 0 4px 4px 0; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.share-row .bar { display: block; height: 100%; border-radius: 0 4px 4px 0; transition: width .5s cubic-bezier(.2,.8,.2,1); }
 .share-row .p { text-align: right; font-weight: 800; }
 .net-box { overflow-x: auto; }
 .net { display: block; width: 100%; min-width: 340px; height: auto; touch-action: manipulation; }
@@ -348,17 +385,56 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 .net .node.sel circle.bg { stroke: var(--ink); stroke-width: 3; }
 .net .dim { opacity: .12; }
 .net .hit { fill: transparent; }
-.legend-net { display: flex; flex-wrap: wrap; gap: 8px; }
 .legend-net .chip svg { width: 26px; height: 10px; }
 .detail { background: var(--bg); border-radius: var(--r-md); padding: 14px; display: grid; gap: 8px; font-size: 13px; }
 .detail h4 { margin: 0; font-size: 16px; font-weight: 900; }
-.detail ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.detail li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.detail ul, .profile ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.detail li, .profile li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; font-size: 13px; }
 .tag { font-size: 10.5px; font-weight: 700; border: 1px solid var(--ink-3); border-radius: 999px; padding: 1px 8px; color: var(--ink-2); white-space: nowrap; }
+
+/* company profile (shown under the chart, and in a sheet for listed companies) */
+.profile { background: var(--surface); border-radius: var(--r-lg); padding: 18px; display: grid; gap: 14px; border: 2px solid var(--ink); animation: rise .35s cubic-bezier(.2,.8,.2,1) both; scroll-margin-top: 20px; }
+.sheet .profile { border: 0; padding: 0; animation: none; }
+@keyframes rise { from { transform: translateY(8px); opacity: .4; } }
+.pf-top { display: flex; gap: 12px; align-items: center; }
+.pf-top .logo { width: 48px; height: 48px; border-radius: 14px; font-size: 18px; }
+.pf-top b { display: block; font-size: 18px; font-weight: 900; line-height: 1.3; }
+.pf-top span { font-size: 12px; color: var(--ink-3); }
+.pf-top .x { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; flex: none; }
+.profile p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.75; }
+.pf-point { background: var(--bg); border-radius: var(--r-md); padding: 12px 14px; display: grid; gap: 4px; }
+.pf-point b { font-size: 12px; }
+.pf-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pf-kpis div { background: var(--bg); border-radius: var(--r-sm); padding: 10px; display: grid; gap: 2px; min-width: 0; align-content: start; }
+.pf-kpis span { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+.pf-kpis b { font-family: var(--font-display); font-size: 17px; line-height: 1.2; overflow-wrap: anywhere; }
+.pf-kpis i { font-style: normal; font-size: 11px; font-weight: 700; }
+.pf-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-links a { font-size: 12.5px; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; text-decoration: none; display: inline-flex; gap: 4px; align-items: center; }
+.pf-meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; margin: 0; }
+.pf-meta dt { color: var(--ink-3); font-size: 12px; }
+.pf-meta dd { margin: 0; }
+
+/* listed-company directory */
+.sector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sector { background: var(--surface); border-radius: var(--r-md); padding: 14px; text-align: left; display: grid; gap: 4px; min-height: 84px; align-content: space-between; }
+.sector b { font-weight: 900; font-size: 15px; line-height: 1.3; }
+.sector span { font-size: 12px; color: var(--ink-3); }
+.sector .num { font-size: 20px; font-weight: 800; color: var(--ink); }
+.sector .deep { justify-self: start; font-size: 10.5px; font-weight: 700; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 1px 8px; }
+.co-rows { background: var(--surface); border-radius: var(--r-md); overflow: hidden; }
+.co-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+.co-row:last-child { border-bottom: 0; }
+.co-row:hover { background: var(--bg); }
+.co-row .code { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--ink-2); }
+.co-row .nm { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-row .nm small { display: block; font-weight: 500; font-size: 11.5px; color: var(--ink-3); }
+.co-row .mk { font-size: 11px; font-weight: 700; color: var(--ink-3); }
+.co-row .star { font-size: 10.5px; font-weight: 700; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+.empty { background: var(--surface); border-radius: var(--r-md); padding: 22px; text-align: center; color: var(--ink-3); font-size: 13px; }
 @media (min-width: 900px) {
   .wrap { max-width: 1040px; }
   .ind-two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: start; }
-  .ind-two > .section { margin-top: 32px; }
 }
 
 /* region */
@@ -376,8 +452,7 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 .reg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .reg-head .num { font-size: 13px; color: var(--ink-3); }
 .co-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.co { background: var(--surface); border-radius: var(--r-lg); padding: 16px; display: grid; gap: 10px; animation: rise .35s cubic-bezier(.2,.8,.2,1) both; }
-@keyframes rise { from { transform: translateY(8px); opacity: .4; } }
+.co { background: var(--surface); border-radius: var(--r-lg); padding: 16px; display: grid; gap: 10px; animation: rise .35s cubic-bezier(.2,.8,.2,1) both; text-align: left; }
 .co-top { display: flex; gap: 12px; align-items: center; }
 .co-top .logo { width: 44px; height: 44px; border-radius: 14px; font-size: 16px; }
 .co-top b { display: block; font-size: 16px; font-weight: 900; line-height: 1.3; }
@@ -391,58 +466,30 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
 
 .toast { position: fixed; z-index: 90; left: 50%; bottom: calc(var(--nav-h) + 70px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-.disclaimer { margin-top: 28px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .bars span.cur i { animation-duration: var(--dur, 5s) !important; }
+  .bars span.cur i { animation-duration: var(--dur, 6s) !important; }
 }
 </style>
 </head>
 <body>
 
 <main id="app">
-  <!-- ① HOME -->
+  <!-- ① HOME: one picture. Only swiping up does anything. -->
   <section id="view-home" class="view" aria-labelledby="home-title">
-    <div class="wrap">
-      <div class="view-head">
+    <div class="home" id="home">
+      <div class="home-title">
         <div>
-          <div class="eyebrow" id="today"></div>
-          <h1 class="h1" id="home-title">ホーム</h1>
+          <h1 id="home-title">Gyoukai</h1>
+          <p>決算で、業界を読む。</p>
         </div>
+        <div class="date" id="today"></div>
       </div>
-
-      <div class="hero" id="hero"></div>
-
-      <div class="section">
-        <div class="section-head"><h2 class="h2">ウォッチリスト</h2><span class="note">直近期の売上高等・前期比</span></div>
-        <div class="hscroll" id="watchlist"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-head"><h2 class="h2">業界をひらく</h2><button class="link" data-go="industry">すべて見る<span data-icon="arrow" class="ic-sm"></span></button></div>
-        <div class="ind-grid" id="indGrid"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-head"><h2 class="h2">きょうの決算用語</h2></div>
-        <div class="term" id="term"></div>
-      </div>
-
-      <div class="section">
-        <button class="region-teaser" data-go="region">
-          <div>
-            <div class="eyebrow">地方</div>
-            <div class="h2" style="margin-top:4px">本社の場所から、企業を探す</div>
-            <p class="sub">東海ならトヨタ・デンソー・イビデン。地元の企業を地図から。</p>
-          </div>
-          <svg viewBox="0 0 120 110" aria-hidden="true" id="teaserMap"></svg>
-        </button>
-      </div>
-
-      <p class="note disclaimer">掲載している財務数値は公表資料をもとにした概数のプロトタイプ用データです。就活や投資判断に使う前に、各社のIR資料・決算短信・有価証券報告書（EDINET）で必ず確認してください。</p>
+      <div class="home-art" id="homeArt" aria-hidden="true"></div>
+      <div class="home-info" id="homeInfo"></div>
+      <button class="pull" id="pull" aria-controls="menu" aria-expanded="false">業界メニュー<span data-icon="chevUp"></span></button>
     </div>
-    <button class="pull" id="pull" aria-controls="menu" aria-expanded="false"><span data-icon="chevUp"></span>上にスワイプでメニュー</button>
   </section>
 
   <!-- ② NEWS -->
@@ -450,14 +497,23 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
     <div class="wrap">
       <div class="view-head">
         <div>
-          <div class="eyebrow">News</div>
+          <div class="eyebrow" id="newsUpdated">News</div>
           <h1 class="h1" id="news-title">ニュース</h1>
         </div>
         <button class="chip" id="postBtn"><span data-icon="plus" class="ic-sm"></span>投稿</button>
       </div>
       <div class="stories" id="stories" role="list" aria-label="業界別ストーリー"></div>
+
+      <div class="section" id="newsSection">
+        <div class="section-head"><h2 class="h2">今日の業界ニュース</h2><span class="note">影響しそうな業界をキーワードから推定</span></div>
+        <div class="ind-nav" id="newsFilter" role="group" aria-label="業界で絞り込む"></div>
+        <div class="news-list" id="newsList"></div>
+        <button class="btn ghost sm" id="newsMore" hidden>もっと見る</button>
+        <p class="note">見出しとリンクはGoogle ニュース経由で各媒体の記事を自動収集（毎朝更新）。＋は追い風、−は逆風、±はどちらもありうる影響を表します。投資判断の根拠にはしないでください。</p>
+      </div>
+
       <div class="section">
-        <div class="section-head"><h2 class="h2">フィード</h2><span class="note">決算発表ベースのサンプル記事</span></div>
+        <div class="section-head"><h2 class="h2">決算ピックアップ</h2><span class="note">最新の決算から</span></div>
         <div class="feed" id="feed"></div>
       </div>
     </div>
@@ -472,36 +528,53 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
           <h1 class="h1" id="ind-title">業界</h1>
         </div>
       </div>
-      <div class="ind-nav" id="indNav" role="group" aria-label="業界を選ぶ"></div>
+      <div class="seg wide" id="indMode" role="group" aria-label="表示の切り替え"></div>
+      <div class="search" style="margin-top:12px">
+        <span data-icon="search"></span>
+        <input class="input" id="coSearch" type="search" placeholder="企業名・証券コードで検索（全上場企業）" autocomplete="off" aria-label="企業を検索">
+      </div>
+      <div id="searchResults" class="section" hidden></div>
 
-      <div class="section">
-        <div class="summary" id="summary"></div>
+      <!-- deep-dive industries -->
+      <div id="deepPane">
+        <div class="ind-nav" id="indNav" role="group" aria-label="業界を選ぶ" style="margin-top:16px"></div>
+        <div class="section"><div class="summary" id="summary"></div></div>
+        <div class="ind-two">
+          <div>
+            <div class="section">
+              <div class="section-head"><h2 class="h2">過去5年の決算</h2><span class="note" id="fyNote"></span></div>
+              <div class="card controls">
+                <div class="seg" id="metricSeg" role="group" aria-label="指標"></div>
+                <div class="chips" id="coChips" role="group" aria-label="企業を選んで説明を見る"></div>
+                <div class="chart-box"><canvas id="finChart" aria-label="決算推移グラフ" role="img"></canvas></div>
+                <p class="note">企業名をタップすると、グラフで強調され、下に企業の説明が出ます。</p>
+              </div>
+              <div id="coDetail" aria-live="polite"></div>
+              <div class="table-wrap"><table class="fin" id="finTable"></table></div>
+            </div>
+          </div>
+          <div>
+            <div class="section">
+              <div class="section-head"><h2 class="h2">シェア構造</h2><span class="note" id="shareNote"></span></div>
+              <div class="card share" id="share"></div>
+            </div>
+            <div class="section">
+              <div class="section-head"><h2 class="h2" id="net">業界相関図</h2><span class="note">企業をタップ</span></div>
+              <div class="card" style="display:grid;gap:12px">
+                <div class="legend-net chips" id="netLegend" role="group" aria-label="関係の種類"></div>
+                <div class="net-box"><svg class="net" id="netSvg" viewBox="0 0 400 340" role="img" aria-label="業界相関図"></svg></div>
+                <div class="detail" id="netDetail" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note disclaimer" id="indDisclaimer"></p>
       </div>
 
-      <div class="ind-two">
-        <div class="section">
-          <div class="section-head"><h2 class="h2">過去5年の決算</h2><span class="note" id="fyNote"></span></div>
-          <div class="card controls">
-            <div class="seg" id="metricSeg" role="group" aria-label="指標"></div>
-            <div class="chips" id="coChips" role="group" aria-label="表示する企業"></div>
-            <div class="chart-box"><canvas id="finChart" aria-label="決算推移グラフ" role="img"></canvas></div>
-          </div>
-          <div class="table-wrap"><table class="fin" id="finTable"></table></div>
-        </div>
-
-        <div class="section">
-          <div class="section-head"><h2 class="h2">シェア構造</h2><span class="note" id="shareNote"></span></div>
-          <div class="card share" id="share"></div>
-
-          <div class="section-head" style="margin-top:18px"><h2 class="h2" id="net">業界相関図</h2><span class="note">ノードをタップ</span></div>
-          <div class="card" style="display:grid;gap:12px">
-            <div class="legend-net chips" id="netLegend" role="group" aria-label="関係の種類"></div>
-            <div class="net-box"><svg class="net" id="netSvg" viewBox="0 0 400 340" role="img" aria-label="業界相関図"></svg></div>
-            <div class="detail" id="netDetail" aria-live="polite"></div>
-          </div>
-        </div>
+      <!-- all listed companies -->
+      <div id="allPane" hidden>
+        <div id="allBody"></div>
       </div>
-      <p class="note disclaimer">財務数値は各社の公表値をもとにした概数（億円）です。会計基準（IFRS・日本基準・米国基準）や決算期が企業により異なるため、厳密な比較には有価証券報告書を参照してください。</p>
     </div>
   </section>
 
@@ -522,7 +595,7 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
         <div class="reg-head"><h2 class="h2" id="regName"></h2><span class="num" id="regCount"></span></div>
         <div class="co-list" id="coList"></div>
       </div>
-      <p class="note disclaimer">本社所在地は登記上の本店所在地（市区町村まで）です。売上高等は直近決算期の概数。</p>
+      <p class="note disclaimer">本社所在地は市区町村まで。売上高等は直近の決算期の概数で、決算期は各カードに記載しています。</p>
     </div>
   </section>
 </main>
@@ -546,7 +619,14 @@ table.fin .yoy { display: block; font-size: 10.5px; font-weight: 500; }
       </div>
       <button class="close-btn" id="menuClose" aria-label="メニューを閉じる"><span data-icon="x"></span></button>
     </div>
+    <div class="menu-section">機能</div>
     <div class="menu-grid" id="menuNow"></div>
+    <div class="menu-section">ウォッチリスト（最新期・前期比）</div>
+    <div class="hscroll" id="watchlist"></div>
+    <div class="menu-section">今日の注目ニュース</div>
+    <div id="menuNews"></div>
+    <div class="menu-section">きょうの決算用語</div>
+    <div class="term" id="term"></div>
     <div class="menu-section">今後追加予定</div>
     <div class="menu-grid" id="menuSoon"></div>
   </div>
@@ -568,10 +648,9 @@ const store = {
   set(k, v) { try { localStorage.setItem("gyoukai." + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 };
 // values are in 億円
-function fmtOku(v, { sign = false } = {}) {
+function fmtOku(v) {
   if (v == null) return "—";
-  const s = v < 0 ? "−" : (sign && v > 0 ? "+" : "");
-  const a = Math.abs(v);
+  const s = v < 0 ? "−" : "", a = Math.abs(v);
   if (a >= 10000) return s + (a / 10000).toFixed(a >= 100000 ? 1 : 2) + "兆円";
   return s + Math.round(a).toLocaleString("ja-JP") + "億円";
 }
@@ -580,11 +659,17 @@ function fmtAxis(v) {
   if (a >= 10000) return s + (a / 10000).toLocaleString("ja-JP", { maximumFractionDigits: 1 }) + "兆";
   return s + a.toLocaleString("ja-JP") + "億";
 }
-const pct = (v, d = 1) => v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + "%";
+const pct = (v, d = 1) => v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(d) + "%";
+const growth = (a, b) => a == null || b == null || a <= 0 ? null : (b - a) / a * 100;
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2400);
 }
+const D = window.GK_DATA;
+const LISTED = window.GK_COMPANIES || null;
+const NEWS = window.GK_NEWS || null;
+const YEARS = D.years;
+const LAST = YEARS.length - 1;
 
 /* ============ icons ============ */
 const ICONS = {
@@ -599,6 +684,7 @@ const ICONS = {
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   chevUp: '<path d="m6 15 6-6 6 6"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   chart: '<path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/>',
@@ -610,322 +696,45 @@ const ICONS = {
   doc: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
   trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
   pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
-  compare: '<path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>'
+  compare: '<path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  yen: '<path d="M6 3l6 8 6-8M12 11v10M7 13h10M7 17h10"/>'
 };
 const ic = (n, cls = "ic") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 function hydrateIcons(root = document) {
   $$("[data-icon]", root).forEach(el => { el.outerHTML = ic(el.dataset.icon, el.classList.contains("ic-sm") ? "ic ic-sm" : "ic"); });
 }
 
-/* ============ data ============ */
-const YEARS = ["FY2020", "FY2021", "FY2022", "FY2023", "FY2024"];
+/* ============ data prep ============ */
 const SERIES = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
 const LABELS = { rev: "売上高", op: "営業利益", np: "純利益" };
-
-const INDUSTRIES = [
-  {
-    id: "auto", name: "自動車", fyNote: "3月期（FY2024＝2025年3月期）",
-    note: "トヨタ・ホンダ・SUBARUはIFRS（売上収益/営業収益）、日産・スズキ・マツダは日本基準。",
-    metrics: ["rev", "op"],
-    companies: [
-      { id: "toyota", name: "トヨタ自動車", short: "トヨタ", rev: [272145, 313795, 371542, 450953, 480367], op: [21977, 29956, 27250, 53529, 47955] },
-      { id: "honda", name: "本田技研工業", short: "ホンダ", rev: [131705, 145526, 169077, 204288, 216888], op: [6602, 8712, 7807, 13819, 12134] },
-      { id: "nissan", name: "日産自動車", short: "日産", rev: [78625, 84245, 105966, 126857, 126332], op: [-1507, 2473, 3771, 5687, 698] },
-      { id: "suzuki", name: "スズキ", short: "スズキ", rev: [31782, 35684, 46416, 53742, 58252], op: [1944, 1915, 3506, 4656, 6434] },
-      { id: "mazda", name: "マツダ", short: "マツダ", rev: [28820, 31203, 38268, 48277, 50189], op: [88, 1042, 1421, 2505, 1861] },
-      { id: "subaru", name: "SUBARU", short: "SUBARU", rev: [28302, 27445, 37746, 47029, 46858], op: [1025, 905, 2682, 4682, 4054] }
-    ],
-    ext: [["daihatsu", "ダイハツ"], ["denso", "デンソー"], ["aisin", "アイシン"], ["renault", "ルノー"], ["mmc", "三菱自動車"], ["renesas", "ルネサス"]],
-    edges: [
-      ["cap", "toyota", "daihatsu", "完全子会社（2016年〜）"],
-      ["cap", "toyota", "subaru", "トヨタが約20%出資・相互出資"],
-      ["cap", "toyota", "mazda", "トヨタが約5%出資・相互出資（2017年〜）"],
-      ["cap", "toyota", "suzuki", "トヨタが約5%出資・相互出資（2019年〜）"],
-      ["cap", "nissan", "renault", "アライアンス・相互出資（2023年に関係を対等化）"],
-      ["cap", "nissan", "mmc", "資本業務提携（2016年〜）"],
-      ["ally", "honda", "nissan", "EV・ソフトウェア分野の協業検討（経営統合協議は2025年2月に終了）"],
-      ["supply", "denso", "toyota", "電装・熱・パワトレ部品を供給（トヨタグループ）"],
-      ["supply", "aisin", "toyota", "駆動系・ボディ部品を供給（トヨタグループ）"],
-      ["supply", "renesas", "denso", "車載半導体（マイコン等）を供給"],
-      ["comp", "toyota", "honda", "乗用車で国内外で競合"],
-      ["comp", "suzuki", "daihatsu", "軽自動車で競合"]
-    ]
-  },
-  {
-    id: "elec", name: "電機", fyNote: "3月期",
-    note: "日立の利益は調整後営業利益。ソニーGは金融事業の分離前後で表示区分が異なる。",
-    metrics: ["rev", "op"],
-    companies: [
-      { id: "sony", name: "ソニーグループ", short: "ソニーG", rev: [89994, 99215, 115398, 130208, 129571], op: [9719, 12023, 12082, 12088, 12766] },
-      { id: "hitachi", name: "日立製作所", short: "日立", rev: [87292, 102646, 108811, 97287, 97833], op: [4951, 7382, 7481, 7558, 9714] },
-      { id: "pana", name: "パナソニックHD", short: "パナソニック", rev: [66987, 73888, 83789, 84964, 84582], op: [2586, 3575, 2886, 3609, 4264] },
-      { id: "melco", name: "三菱電機", short: "三菱電機", rev: [41914, 44767, 50036, 52579, 55217], op: [2301, 2520, 2624, 3285, 3918] }
-    ],
-    ext: [["shm", "ソニー・ホンダモビリティ"], ["honda_x", "ホンダ"], ["tesla", "テスラ"], ["toyota_x", "トヨタ"], ["ppes", "PPES（電池合弁）"], ["sfg", "ソニーFG"]],
-    edges: [
-      ["ally", "sony", "shm", "ホンダと50:50の合弁（EV「AFEELA」）"],
-      ["ally", "honda_x", "shm", "ソニーと50:50の合弁"],
-      ["supply", "pana", "tesla", "パナソニックエナジーが車載電池を供給"],
-      ["cap", "toyota_x", "ppes", "車載電池の合弁（トヨタが過半出資）"],
-      ["cap", "pana", "ppes", "車載電池の合弁に出資"],
-      ["cap", "sony", "sfg", "2025年にパーシャル・スピンオフ（一部株式を保有）"],
-      ["comp", "hitachi", "melco", "社会インフラ・FA・空調で競合"],
-      ["comp", "sony", "pana", "テレビ・AV機器で競合"]
-    ]
-  },
-  {
-    id: "it", name: "IT・通信", fyNote: "3月期／楽天は12月期",
-    note: "楽天グループはIFRS・12月期（FY2020＝2020年12月期）。",
-    metrics: ["rev", "op"],
-    companies: [
-      { id: "ntt", name: "NTT", short: "NTT", rev: [119440, 121564, 131362, 133746, 137047], op: [16714, 17686, 18289, 19229, 16496] },
-      { id: "kddi", name: "KDDI", short: "KDDI", rev: [53126, 54467, 56718, 57540, 59180], op: [10374, 10606, 10757, 9616, 11187] },
-      { id: "sb", name: "ソフトバンク", short: "ソフトバンク", rev: [52055, 56907, 59120, 60840, 65443], op: [9708, 9857, 10602, 8761, 9890] },
-      { id: "rakuten", name: "楽天グループ", short: "楽天G", rev: [14555, 16817, 19279, 20713, 22793], op: [-938, -1947, -3638, -2128, 530] }
-    ],
-    ext: [["docomo", "NTTドコモ"], ["lawson", "ローソン"], ["paypay", "PayPay"], ["lyc", "LINEヤフー"], ["rmobile", "楽天モバイル"]],
-    edges: [
-      ["cap", "ntt", "docomo", "完全子会社（2020年〜）"],
-      ["cap", "kddi", "lawson", "50%出資（2024年〜、三菱商事と共同経営）"],
-      ["cap", "sb", "paypay", "連結子会社（キャッシュレス決済）"],
-      ["cap", "sb", "lyc", "連結子会社（ネット・広告）"],
-      ["cap", "rakuten", "rmobile", "子会社（携帯キャリア事業）"],
-      ["ally", "kddi", "rmobile", "ローミング提携（楽天回線のエリアを補完）"],
-      ["comp", "docomo", "kddi", "携帯通信で競合"],
-      ["comp", "kddi", "sb", "携帯通信で競合"],
-      ["comp", "sb", "rmobile", "携帯通信で競合"]
-    ]
-  },
-  {
-    id: "semi", name: "半導体・電子部品", fyNote: "3月期",
-    note: "製造装置・検査装置・部品メーカーを掲載。半導体メーカー本体（キオクシア等）は今後追加予定。",
-    metrics: ["rev", "op"],
-    companies: [
-      { id: "tel", name: "東京エレクトロン", short: "東京エレク", rev: [13991, 20038, 22091, 18305, 24316], op: [3209, 5992, 6177, 4562, 6973] },
-      { id: "murata", name: "村田製作所", short: "村田", rev: [16302, 18125, 16868, 16402, 17434], op: [3133, 4241, 2995, 2165, 2798] },
-      { id: "advantest", name: "アドバンテスト", short: "アドバンテスト", rev: [3128, 4169, 5601, 4865, 7797], op: [696, 1135, 1668, 812, 2284] },
-      { id: "ibiden", name: "イビデン", short: "イビデン", rev: [3231, 4011, 4175, 3705, 3706], op: [405, 685, 694, 452, 519] }
-    ],
-    ext: [["tsmc", "TSMC"], ["jasm", "JASM（熊本）"], ["nvidia", "NVIDIA"], ["intel", "インテル"], ["rapidus", "ラピダス"], ["sony_y", "ソニー"], ["denso_y", "デンソー"], ["kyocera", "京セラ"]],
-    edges: [
-      ["supply", "tel", "tsmc", "前工程の製造装置を供給"],
-      ["supply", "advantest", "nvidia", "半導体テスター（AI向けGPU等）"],
-      ["supply", "ibiden", "intel", "ICパッケージ基板を供給"],
-      ["cap", "tsmc", "jasm", "過半出資（熊本工場の運営会社）"],
-      ["cap", "sony_y", "jasm", "少数出資"],
-      ["cap", "denso_y", "jasm", "少数出資"],
-      ["cap", "sony_y", "rapidus", "設立時に出資（国内8社の1社）"],
-      ["cap", "denso_y", "rapidus", "設立時に出資（国内8社の1社）"],
-      ["comp", "murata", "kyocera", "積層セラミックコンデンサ等で競合"]
-    ]
-  },
-  {
-    id: "trade", name: "総合商社", fyNote: "3月期",
-    note: "商社は「売上高」より「当期純利益（親会社所有者帰属）」で比べるのが一般的。売上高欄はIFRSの収益。",
-    metrics: ["rev", "np"], labels: { rev: "収益", np: "純利益" },
-    companies: [
-      { id: "mc", name: "三菱商事", short: "三菱商事", rev: [128845, 172648, 215720, 195676, 186176], np: [1725, 9375, 11807, 9640, 9507] },
-      { id: "mitsui", name: "三井物産", short: "三井物産", rev: [80102, 117575, 143064, 133249, 146626], np: [3355, 9147, 11306, 10637, 9003] },
-      { id: "itochu", name: "伊藤忠商事", short: "伊藤忠", rev: [103626, 122933, 139456, 140299, 147242], np: [4014, 8203, 8005, 8018, 8803] },
-      { id: "sumitomo", name: "住友商事", short: "住友商事", rev: [46450, 55015, 68179, 69103, 72919], np: [-1531, 4637, 5652, 3864, 5619] },
-      { id: "marubeni", name: "丸紅", short: "丸紅", rev: [63325, 85086, 91904, 72505, 77901], np: [2253, 4243, 5430, 4714, 5030] }
-    ],
-    ext: [["berkshire", "バークシャー"], ["lawson_t", "ローソン"], ["fm", "ファミリーマート"]],
-    edges: [
-      ["cap", "berkshire", "mc", "2020年に5大商社株の保有を公表、その後買い増し"],
-      ["cap", "berkshire", "mitsui", "5大商社株を保有"],
-      ["cap", "berkshire", "itochu", "5大商社株を保有"],
-      ["cap", "berkshire", "sumitomo", "5大商社株を保有"],
-      ["cap", "berkshire", "marubeni", "5大商社株を保有"],
-      ["cap", "mc", "lawson_t", "50%出資（KDDIと共同経営）"],
-      ["cap", "itochu", "fm", "子会社化・非上場化（2020年）"],
-      ["comp", "lawson_t", "fm", "コンビニで競合"],
-      ["comp", "mc", "mitsui", "資源・エネルギー投資で競合"]
-    ]
-  },
-  {
-    id: "fin", name: "金融（銀行）", fyNote: "3月期",
-    note: "銀行は売上高にあたる指標が事業会社と異なるため、親会社株主に帰属する当期純利益で比較。",
-    metrics: ["np"], labels: { np: "純利益" },
-    companies: [
-      { id: "mufg", name: "三菱UFJフィナンシャル・グループ", short: "MUFG", np: [7770, 11308, 11164, 14907, 18629] },
-      { id: "smfg", name: "三井住友フィナンシャルグループ", short: "SMFG", np: [5128, 7066, 8058, 9629, 11780] },
-      { id: "mizuho", name: "みずほフィナンシャルグループ", short: "みずほ", np: [4710, 5305, 5555, 6789, 8854] }
-    ],
-    ext: [["ms", "モルガン・スタンレー"], ["jefferies", "ジェフリーズ"], ["rakusec", "楽天証券"]],
-    edges: [
-      ["cap", "mufg", "ms", "約2割を出資（持分法適用、2008年〜）"],
-      ["cap", "smfg", "jefferies", "資本業務提携（出資比率を段階的に引き上げ）"],
-      ["cap", "mizuho", "rakusec", "みずほ証券が約5割を出資（2023年〜）"],
-      ["comp", "mufg", "smfg", "法人・個人取引で競合"],
-      ["comp", "smfg", "mizuho", "法人・個人取引で競合"]
-    ]
-  },
-  {
-    id: "retail", name: "小売", fyNote: "8月・2月・3月期",
-    note: "ファストリは8月期、セブン&アイ・イオンは2月期（FY2024＝2025年2月期）、ニトリは3月期。",
-    metrics: ["rev", "op"],
-    companies: [
-      { id: "fr", name: "ファーストリテイリング", short: "ファストリ", rev: [20088, 21329, 23011, 27665, 31038], op: [1493, 2490, 2973, 3810, 5009] },
-      { id: "seven", name: "セブン&アイ・ホールディングス", short: "セブン&アイ", rev: [57667, 87498, 118113, 114717, 119727], op: [3663, 3876, 5065, 5342, 4209] },
-      { id: "aeon", name: "イオン", short: "イオン", rev: [86039, 87159, 91168, 95535, 101348], op: [1505, 1743, 2098, 2508, 2377] },
-      { id: "nitori", name: "ニトリHD", short: "ニトリ", rev: [7169, 8115, 9480, 8957, 9290], op: [1384, 1383, 1401, 1282, 1191] }
-    ],
-    ext: [["sej", "セブン-イレブン"], ["act", "クシュタール"], ["uniqlo", "ユニクロ"], ["welcia", "ウエルシア"]],
-    edges: [
-      ["cap", "seven", "sej", "中核子会社（国内・北米のコンビニ）"],
-      ["cap", "act", "seven", "買収提案（2025年7月に撤回）"],
-      ["cap", "fr", "uniqlo", "中核事業（海外売上が国内を上回る）"],
-      ["cap", "aeon", "welcia", "ドラッグストア事業を傘下に"],
-      ["comp", "aeon", "seven", "総合スーパー・食品で競合"]
-    ]
-  }
-];
 const EDGE_TYPES = { cap: "資本関係", ally: "提携・合弁", supply: "取引・供給", comp: "競合" };
-
+const FY_EXCEPT = { rakuten: "2025年12月期", chugai: "2025年12月期", fr: "2026年8月期", seven: "2026年2月期", aeon: "2026年2月期" };
+const INDUSTRIES = D.industries;
+const lastVal = arr => { if (!arr) return null; for (let i = arr.length - 1; i >= 0; i--) if (arr[i] != null) return arr[i]; return null; };
+const yoyOf = arr => arr ? growth(arr[LAST - 1], arr[LAST]) : null;
+// 前期比の表示（赤字転落・黒字化も言葉で示す）
+function yoyText(prev, cur) {
+  if (prev == null || cur == null) return { t: "—", cls: "muted" };
+  if (prev > 0 && cur < 0) return { t: "赤字転落", cls: "down" };
+  if (prev <= 0 && cur > 0) return { t: "黒字化", cls: "up" };
+  if (prev <= 0) return { t: "赤字", cls: "down" };
+  const g = (cur - prev) / prev * 100;
+  return { t: pct(g), cls: g >= 0 ? "up" : "down" };
+}
 INDUSTRIES.forEach(ind => {
   ind.labels = Object.assign({}, LABELS, ind.labels || {});
   ind.profitKey = ind.metrics.includes("op") ? "op" : "np";
   ind.sizeKey = ind.metrics.includes("rev") ? "rev" : ind.profitKey;
-  ind.companies.forEach((c, i) => { c.color = SERIES[i]; c.ind = ind.id; });
+  ind.companies.forEach((c, i) => { c.color = SERIES[i]; c.ind = ind.id; c.fy = FY_EXCEPT[c.id] || "2026年3月期"; });
 });
 const findInd = id => INDUSTRIES.find(i => i.id === id);
+const CURATED_BY_CODE = {};
+INDUSTRIES.forEach(ind => ind.companies.forEach(c => { if (c.code) CURATED_BY_CODE[c.code] = c; }));
+const SECTOR_TO_IND = { "輸送用機器": ["auto"], "電気機器": ["elec", "semi"], "情報・通信業": ["it", "game"], "卸売業": ["trade"], "銀行業": ["fin"], "小売業": ["retail"], "陸運業": ["rail"], "不動産業": ["realestate"], "建設業": ["construction"], "医薬品": ["pharma"], "その他製品": ["game"] };
+const IND_NAME = Object.assign({}, NEWS && NEWS.industries || {}, Object.fromEntries(INDUSTRIES.map(i => [i.id, i.name])));
 
-const REGIONS = [
-  { id: "ht", name: "北海道・東北", prefs: ["北海道", "青森", "秋田", "岩手", "山形", "宮城", "福島"] },
-  { id: "kt", name: "関東", prefs: ["茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川"] },
-  { id: "hk", name: "北陸・甲信越", prefs: ["新潟", "富山", "石川", "福井", "山梨", "長野"] },
-  { id: "tk", name: "東海", prefs: ["岐阜", "静岡", "愛知", "三重"] },
-  { id: "kk", name: "近畿", prefs: ["滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山"] },
-  { id: "cs", name: "中国・四国", prefs: ["鳥取", "島根", "岡山", "広島", "山口", "徳島", "香川", "愛媛", "高知"] },
-  { id: "ko", name: "九州・沖縄", prefs: ["福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"] }
-];
-// [name, col, row] on a 13 x 12 tile grid (北海道 is 2x2)
-const TILES = [
-  ["北海道", 11, 0, 2], ["青森", 11, 2], ["秋田", 10, 3], ["岩手", 11, 3], ["山形", 10, 4], ["宮城", 11, 4],
-  ["石川", 8, 5], ["富山", 9, 5], ["新潟", 10, 5], ["福島", 11, 5],
-  ["島根", 3, 6], ["鳥取", 4, 6], ["兵庫", 5, 6], ["京都", 6, 6], ["福井", 7, 6], ["岐阜", 8, 6], ["長野", 9, 6], ["群馬", 10, 6], ["栃木", 11, 6],
-  ["佐賀", 0, 7], ["福岡", 1, 7], ["山口", 2, 7], ["広島", 3, 7], ["岡山", 4, 7], ["大阪", 5, 7], ["滋賀", 6, 7], ["三重", 7, 7], ["愛知", 8, 7], ["山梨", 9, 7], ["埼玉", 10, 7], ["茨城", 11, 7],
-  ["長崎", 0, 8], ["熊本", 1, 8], ["大分", 2, 8], ["愛媛", 3, 8], ["香川", 4, 8], ["和歌山", 5, 8], ["奈良", 6, 8], ["静岡", 9, 8], ["東京", 10, 8], ["千葉", 11, 8],
-  ["鹿児島", 1, 9], ["宮崎", 2, 9], ["高知", 3, 9], ["徳島", 4, 9], ["神奈川", 10, 9],
-  ["沖縄", 0, 11]
-];
-const REGION_COS = {
-  ht: [
-    { name: "ニトリホールディングス", pref: "北海道", city: "札幌市北区", biz: "小売（家具・インテリア）", rev: 9290, fy: "2025年3月期", desc: "製造から物流・販売まで自社で担う「製造物流小売業」。", link: ["retail", "nitori"] },
-    { name: "東北電力", pref: "宮城", city: "仙台市青葉区", biz: "電力", rev: null, fy: "—", desc: "東北6県と新潟県に電力を供給。財務データは今後追加予定。" }
-  ],
-  kt: [
-    { name: "本田技研工業", pref: "東京", city: "港区", biz: "自動車・二輪", rev: 216888, fy: "2025年3月期", desc: "二輪で世界首位級。四輪・パワープロダクツ・航空機も。", link: ["auto", "honda"] },
-    { name: "日産自動車", pref: "神奈川", city: "横浜市西区", biz: "自動車", rev: 126332, fy: "2025年3月期", desc: "ルノー・三菱自動車とアライアンス。再建計画を推進中。", link: ["auto", "nissan"] },
-    { name: "SUBARU", pref: "東京", city: "渋谷区", biz: "自動車", rev: 46858, fy: "2025年3月期", desc: "水平対向エンジンとAWD。北米が主力市場。", link: ["auto", "subaru"] },
-    { name: "ソニーグループ", pref: "東京", city: "港区", biz: "電機・エンタメ", rev: 129571, fy: "2025年3月期", desc: "ゲーム・音楽・映画とイメージセンサーが収益の柱。", link: ["elec", "sony"] },
-    { name: "日立製作所", pref: "東京", city: "千代田区", biz: "電機・社会インフラ", rev: 97833, fy: "2025年3月期", desc: "デジタル・エネルギー・鉄道などに事業を集中。", link: ["elec", "hitachi"] },
-    { name: "NTT", pref: "東京", city: "千代田区", biz: "通信", rev: 137047, fy: "2025年3月期", desc: "ドコモ・データセンター・IOWN構想。", link: ["it", "ntt"] },
-    { name: "東京エレクトロン", pref: "東京", city: "港区", biz: "半導体製造装置", rev: 24316, fy: "2025年3月期", desc: "成膜・エッチング・塗布現像などの前工程装置。", link: ["semi", "tel"] },
-    { name: "三菱商事", pref: "東京", city: "千代田区", biz: "総合商社", rev: 186176, revLabel: "収益", fy: "2025年3月期", desc: "資源・食品・自動車など幅広い事業投資。", link: ["trade", "mc"] },
-    { name: "三菱UFJフィナンシャル・グループ", pref: "東京", city: "千代田区", biz: "銀行", rev: 18629, revLabel: "純利益", fy: "2025年3月期", desc: "国内最大の金融グループ。", link: ["fin", "mufg"] }
-  ],
-  hk: [
-    { name: "ファナック", pref: "山梨", city: "南都留郡忍野村", biz: "FA・産業用ロボット", rev: 7971, fy: "2025年3月期", desc: "工作機械用CNCと産業用ロボットの大手。" },
-    { name: "セイコーエプソン", pref: "長野", city: "諏訪市", biz: "電機（プリンター等）", rev: 13629, fy: "2025年3月期", desc: "インクジェットプリンター・プロジェクター・水晶デバイス。" }
-  ],
-  tk: [
-    { name: "トヨタ自動車", pref: "愛知", city: "豊田市", biz: "自動車", rev: 480367, fy: "2025年3月期", desc: "世界販売台数トップクラス。HV・EV・水素の全方位戦略。", link: ["auto", "toyota"] },
-    { name: "デンソー", pref: "愛知", city: "刈谷市", biz: "自動車部品", rev: 71618, fy: "2025年3月期", desc: "国内最大の自動車部品メーカー。トヨタグループ。" },
-    { name: "アイシン", pref: "愛知", city: "刈谷市", biz: "自動車部品", rev: 48961, fy: "2025年3月期", desc: "AT・駆動ユニットなどパワートレイン部品。トヨタグループ。" },
-    { name: "イビデン", pref: "岐阜", city: "大垣市", biz: "電子部品・セラミック", rev: 3706, fy: "2025年3月期", desc: "ICパッケージ基板とセラミック製品。AIサーバー需要に注目。", link: ["semi", "ibiden"] },
-    { name: "スズキ", pref: "静岡", city: "浜松市中央区", biz: "自動車・二輪", rev: 58252, fy: "2025年3月期", desc: "軽自動車とインド市場（マルチ・スズキ）が強み。", link: ["auto", "suzuki"] },
-    { name: "ヤマハ発動機", pref: "静岡", city: "磐田市", biz: "二輪・マリン", rev: 25762, fy: "2024年12月期", desc: "二輪・船外機・ロボティクス。売上の大半が海外。" }
-  ],
-  kk: [
-    { name: "パナソニックHD", pref: "大阪", city: "門真市", biz: "電機", rev: 84582, fy: "2025年3月期", desc: "家電・空調・車載電池・BtoBソリューション。", link: ["elec", "pana"] },
-    { name: "任天堂", pref: "京都", city: "京都市南区", biz: "ゲーム", rev: 11649, fy: "2025年3月期", desc: "ゲーム機とIP（キャラクター）ビジネス。" },
-    { name: "村田製作所", pref: "京都", city: "長岡京市", biz: "電子部品", rev: 17434, fy: "2025年3月期", desc: "積層セラミックコンデンサで世界首位級。", link: ["semi", "murata"] },
-    { name: "京セラ", pref: "京都", city: "京都市伏見区", biz: "電子部品・機器", rev: 20144, fy: "2025年3月期", desc: "ファインセラミックから通信機器・複合機まで。" },
-    { name: "ダイキン工業", pref: "大阪", city: "大阪市北区", biz: "空調", rev: 47523, fy: "2025年3月期", desc: "業務用・家庭用空調で世界首位級。" },
-    { name: "キーエンス", pref: "大阪", city: "大阪市東淀川区", biz: "FA用センサー・計測", rev: 10591, fy: "2025年3月期", desc: "ファブレス・直販モデルで高い営業利益率。" }
-  ],
-  cs: [
-    { name: "マツダ", pref: "広島", city: "安芸郡府中町", biz: "自動車", rev: 50189, fy: "2025年3月期", desc: "SKYACTIV技術とデザイン。広島の地域経済の要。", link: ["auto", "mazda"] },
-    { name: "ファーストリテイリング", pref: "山口", city: "山口市", biz: "小売（アパレル）", rev: 31038, fy: "2024年8月期", desc: "ユニクロ・GU。海外ユニクロ事業が最大の稼ぎ頭。", link: ["retail", "fr"] },
-    { name: "ユニ・チャーム", pref: "愛媛", city: "四国中央市", biz: "日用品（衛生用品）", rev: 9886, fy: "2024年12月期", desc: "紙おむつ・生理用品。アジアで高シェア。" }
-  ],
-  ko: [
-    { name: "TOTO", pref: "福岡", city: "北九州市小倉北区", biz: "住宅設備", rev: 7242, fy: "2025年3月期", desc: "衛生陶器・温水洗浄便座。半導体製造装置向けセラミックも。" },
-    { name: "安川電機", pref: "福岡", city: "北九州市八幡西区", biz: "FA・ロボット", rev: 5376, fy: "2025年2月期", desc: "サーボモーター・インバーター・産業用ロボット。" }
-  ]
-};
-
-const STORIES = [
-  { id: "auto", name: "自動車", seed: 3, slides: [
-    { k: "決算", t: "トヨタ、2025年3月期の売上高は48兆円", b: "営業収益は48.0兆円で過去最高。一方で営業利益は4.8兆円と、前期の5.4兆円から減益になった。", big: "48.0", unit: "兆円" },
-    { k: "再編", t: "ホンダ・日産の経営統合協議は打ち切り", b: "2024年12月に始まった協議は2025年2月に終了。EV・ソフトウェア分野での協業の検討は続くとされた。", big: "2025", unit: "年2月" },
-    { k: "構造", t: "トヨタを中心にした資本の輪", b: "SUBARU（約20%）、マツダ・スズキ（約5%）に出資し、ダイハツは完全子会社。業界画面の相関図で確認できる。", big: "4", unit: "社" }
-  ] },
-  { id: "it", name: "IT・通信", seed: 6, slides: [
-    { k: "トレンド", t: "生成AIでデータセンター投資が拡大", b: "AI向けの計算基盤への投資が世界で増えている。国内でも電力と用地を確保しやすい地方での建設計画が相次ぐ。", big: "AI", unit: "" },
-    { k: "見方", t: "通信大手は「通信以外」の伸びを見る", b: "料金値下げ以降、金融・決済・法人DXなど通信以外の売上がどれだけ伸びているかが評価のポイントになっている。", big: "非通信", unit: "" }
-  ] },
-  { id: "fin", name: "金融", seed: 9, slides: [
-    { k: "金利", t: "日銀がマイナス金利を解除（2024年3月）", b: "17年ぶりの利上げ。貸出金利と預金金利の差（利ざや）が広がり、銀行の資金利益が伸びやすい局面に入った。", big: "17", unit: "年ぶり" },
-    { k: "決算", t: "3メガバンクの純利益が過去最高に", b: "2025年3月期はMUFGが1.86兆円、SMFGが1.18兆円、みずほが8,854億円。金利上昇と海外事業が寄与した。", big: "1.86", unit: "兆円" }
-  ] },
-  { id: "semi", name: "半導体", seed: 12, slides: [
-    { k: "地方", t: "熊本でTSMCの工場（JASM）が稼働", b: "2024年末に量産を開始。周辺に装置・素材メーカーの進出が続き、九州の設備投資と雇用を押し上げている。", big: "熊本", unit: "" },
-    { k: "地方", t: "北海道千歳でラピダスが2nmを試作", b: "2025年に試作ラインを立ち上げ、2027年ごろの量産開始を目指す。トヨタ・ソニー・NTTなど国内8社が出資。", big: "2nm", unit: "" },
-    { k: "企業", t: "イビデンはICパッケージ基板の大手", b: "岐阜県大垣市に本社。AIサーバー向けの高性能基板の需要が業績を大きく左右する。", big: "岐阜", unit: "" }
-  ] },
-  { id: "elec", name: "電機", seed: 15, slides: [
-    { k: "構造", t: "ソニーGはエンタメとセンサーの会社に", b: "ゲーム・音楽・映画とイメージセンサーが利益の柱。セグメント別の利益を並べると変化がよくわかる。", big: "5", unit: "事業" },
-    { k: "構造", t: "日立は事業の入れ替えで「選択と集中」", b: "上場子会社の売却を進め、デジタル・エネルギー・鉄道など社会インフラ領域に集中した。", big: "0", unit: "社（上場子会社）" }
-  ] },
-  { id: "trade", name: "商社", seed: 18, slides: [
-    { k: "投資家", t: "5大商社に海外投資家の注目", b: "米バークシャー・ハサウェイが2020年に5大商社株の保有を公表し、その後も買い増した。資源と非資源のバランスが比較のポイント。", big: "5", unit: "大商社" }
-  ] },
-  { id: "retail", name: "小売", seed: 21, slides: [
-    { k: "地方", t: "ユニクロは海外売上が国内を上回る", b: "ファーストリテイリングの本社は山口県山口市。海外ユニクロ事業の売上収益が国内ユニクロを上回っている。", big: "山口", unit: "" },
-    { k: "再編", t: "セブン&アイへの買収提案は撤回", b: "カナダのアリマンタシォン・クシュタールによる買収提案は2025年7月に撤回された。", big: "2025", unit: "年7月" }
-  ] }
-];
-
-const POSTS = [
-  { id: "p1", co: "トヨタ自動車", ind: "自動車", date: "2025年5月", seed: 2, big: "48.0", unit: "兆円", cap: "営業収益 FY2024",
-    title: "2025年3月期決算：売上高は過去最高、営業利益は減益",
-    body: "営業収益は48兆367億円（前期比+6.5%）で過去最高を更新した。営業利益は4兆7,955億円（同−10.4%）。円安が利益を押し上げた一方、人への投資や成長投資、資材費の上昇などが重荷になった。営業利益率は約10.0%で、日本の自動車メーカーの中では依然として高い水準にある。",
-    kpis: [["営業収益", "48.0兆円"], ["営業利益", "4.80兆円"], ["利益率", "10.0%"]], likes: 128 },
-  { id: "p2", co: "本田技研工業", ind: "自動車", date: "2025年5月", seed: 5, big: "1.21", unit: "兆円", cap: "営業利益 FY2024",
-    title: "二輪が全社の利益を支える構図",
-    body: "2025年3月期の売上収益は21.7兆円、営業利益は1.21兆円。二輪事業は利益率が高く、全社の営業利益の半分以上を稼いでいる。四輪のEV投資をどう進めるかが今後の焦点になる。",
-    kpis: [["売上収益", "21.7兆円"], ["営業利益", "1.21兆円"]], likes: 86 },
-  { id: "p3", co: "三菱UFJフィナンシャル・グループ", ind: "金融", date: "2025年5月", seed: 8, big: "1.86", unit: "兆円", cap: "純利益 FY2024",
-    title: "メガバンクの純利益が過去最高を更新",
-    body: "2025年3月期の親会社株主に帰属する当期純利益は1兆8,629億円で、国内企業でも上位の水準。日銀の利上げで国内の預貸ビジネスの利ざやが改善し、海外事業も伸びた。",
-    kpis: [["純利益", "1.86兆円"], ["前期比", "+25.0%"]], likes: 64 },
-  { id: "p4", co: "東京エレクトロン", ind: "半導体", date: "2025年5月", seed: 11, big: "28.7", unit: "%", cap: "営業利益率 FY2024",
-    title: "AI向け投資で売上高・利益とも過去最高",
-    body: "2025年3月期の売上高は2兆4,316億円、営業利益は6,973億円。生成AI向けの先端ロジックやメモリーへの設備投資が追い風になった。製造装置は顧客の投資サイクルの影響を強く受けるため、FY2023の落ち込みと合わせて見るのがポイント。",
-    kpis: [["売上高", "2.43兆円"], ["営業利益", "6,973億円"]], likes: 52 },
-  { id: "p5", co: "日産自動車", ind: "自動車", date: "2025年5月", seed: 14, big: "698", unit: "億円", cap: "営業利益 FY2024",
-    title: "営業利益は前期比9割減、再建計画を推進",
-    body: "2025年3月期の営業利益は698億円（前期比−87.7%）。北米・中国での販売不振が響いた。生産拠点の削減などを含む再建計画「Re:Nissan」を発表し、固定費の圧縮を進めている。",
-    kpis: [["売上高", "12.6兆円"], ["営業利益", "698億円"]], likes: 97 },
-  { id: "p6", co: "ファーストリテイリング", ind: "小売", date: "2024年10月", seed: 17, big: "3.10", unit: "兆円", cap: "売上収益 FY2024",
-    title: "売上収益が初の3兆円台に",
-    body: "2024年8月期の売上収益は3兆1,038億円、営業利益は5,009億円。海外ユニクロ事業の成長が大きく、本社のある山口県から世界に展開する企業の代表例になっている。",
-    kpis: [["売上収益", "3.10兆円"], ["営業利益", "5,009億円"]], likes: 71 }
-];
-
-const TERMS = [
-  { w: "営業利益率", f: "営業利益 ÷ 売上高 × 100", d: "本業でどれだけ効率よく稼いでいるか。同じ業界の中で比べると、会社の「稼ぐ力」の違いがわかる。" },
-  { w: "売上高（売上収益）", f: "IFRSでは「売上収益」「営業収益」と呼ぶ", d: "会社の規模を表すもっとも基本的な数字。会計基準によって名前が変わるので、比べるときは注意。" },
-  { w: "当期純利益", f: "経常利益 ± 特別損益 − 法人税等", d: "最終的に株主に残る利益。資産売却などの一時的な要因で大きく動くことがある。" },
-  { w: "前期比（YoY）", f: "（今期 − 前期）÷ 前期 × 100", d: "1年でどれだけ伸びたか。為替や一時要因を差し引いて読むと、実力が見えやすい。" },
-  { w: "セグメント", f: "事業や地域ごとの区分", d: "決算短信の「セグメント情報」を見ると、どの事業で稼いでいるかがわかる。" },
-  { w: "有価証券報告書", f: "EDINETで誰でも無料で閲覧できる", d: "事業内容・従業員の平均年収・リスクまで載っている、企業研究の一次情報。" }
-];
-
-/* ============ illustrations (geometric, monochrome) ============ */
+/* ============ illustrations ============ */
 function illo(seed, { big = "", unit = "", tag = "" } = {}) {
   const v = seed % 4;
   let shapes = "";
@@ -947,17 +756,72 @@ function illo(seed, { big = "", unit = "", tag = "" } = {}) {
       `<rect x="30" y="300" width="90" height="12" rx="6" fill="var(--il-2)"/><rect x="30" y="324" width="60" height="12" rx="6" fill="var(--il-2)"/>` +
       `<path d="M330 30 l40 40 M370 30 l-40 40" stroke="var(--il-2)" stroke-width="10" stroke-linecap="round"/>`;
   }
-  const bigSize = big.length > 4 ? 64 : 88;
+  const bigSize = big.length > 5 ? 56 : big.length > 4 ? 68 : 88;
   return `<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="400" height="400" fill="var(--il-bg)"/>${shapes}` +
     (tag ? `<text x="30" y="58" font-family="Zen Kaku Gothic New, sans-serif" font-weight="700" font-size="20" fill="var(--il-1)">${esc(tag)}</text>` : "") +
     (big ? `<text x="26" y="${tag ? 150 : 130}" font-family="Archivo, Zen Kaku Gothic New, sans-serif" font-weight="800" font-size="${bigSize}" letter-spacing="-2" fill="var(--il-1)">${esc(big)}<tspan font-size="28" font-weight="700" dx="6" font-family="Zen Kaku Gothic New, sans-serif" letter-spacing="0">${esc(unit)}</tspan></text>` : "") +
     `</svg>`;
 }
-
 function ringFace(name, seed) {
   const v = seed % 3;
   const deco = v === 0 ? `<circle cx="48" cy="12" r="14" fill="var(--il-2)"/>` : v === 1 ? `<path d="M0 60 L0 38 A22 22 0 0 1 22 60 Z" fill="var(--il-2)"/>` : `<rect x="40" y="40" width="20" height="20" rx="3" fill="var(--il-2)" transform="rotate(15 50 50)"/>`;
-  return `<svg viewBox="0 0 60 60" aria-hidden="true"><rect width="60" height="60" fill="var(--il-bg)"/>${deco}<text x="30" y="31" text-anchor="middle" dominant-baseline="central" font-family="Zen Kaku Gothic New, sans-serif" font-weight="900" font-size="20" fill="var(--il-1)">${esc(name.slice(0, 1))}</text></svg>`;
+  return `<svg viewBox="0 0 60 60" aria-hidden="true"><rect width="60" height="60" fill="var(--il-bg)"/>${deco}<text x="30" y="31" text-anchor="middle" dominant-baseline="central" font-family="Zen Kaku Gothic New, sans-serif" font-weight="900" font-size="18" fill="var(--il-1)">${esc(name.slice(0, 2))}</text></svg>`;
+}
+// Home: a black-and-white line drawing of a study desk looking out on a city of industries
+function homeArt() {
+  const win = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) win.push(`<rect class="fk" x="${57 + c * 10}" y="${80 + r * 14}" width="5" height="7"/>`);
+  for (let r = 0; r < 6; r++) win.push(`<path class="ln" d="M101 ${62 + r * 12}h14" style="stroke-width:1.6"/>`);
+  return `<svg viewBox="0 -96 400 456" preserveAspectRatio="xMidYMid meet">
+  <path class="ln" d="M120 -96v40M290 -96v52"/>
+  <path class="fk" d="M100 -56h40l12 22H88z"/><path class="ln" d="M110 -30a10 6 0 0 0 20 0"/>
+  <path class="fk" d="M272 -44h36l10 20h-56z"/><path class="ln" d="M281 -20a9 5 0 0 0 18 0"/>
+  <rect class="ln fw" x="168" y="-62" width="64" height="58" rx="3"/>
+  <path class="ln" d="M178 -16l12-14 10 6 12-18 10 8" style="stroke-width:2"/>
+  <path class="ln" d="M178 -48h24M178 -40h16" style="stroke-width:1.6"/>
+  <path class="ln" d="M200 -62l-8-10M200 -62l8-10" style="stroke-width:1.6"/>
+  <rect class="ln fw" x="28" y="18" width="344" height="138" rx="4"/>
+  <circle class="ln" cx="70" cy="46" r="13"/>
+  <rect class="ln fw" x="50" y="70" width="40" height="76"/>${win.join("")}
+  <path class="ln fw" d="M96 146V52h24v94"/><path class="ln" d="M108 52V34"/>
+  <path class="ln fw" d="M128 146v-34l16-10v10l16-10v10l16-10v44z"/>
+  <rect class="fk" x="178" y="70" width="12" height="42"/>
+  <g class="smoke"><circle class="ln fw" cx="190" cy="58" r="7"/><circle class="ln fw" cx="202" cy="48" r="9"/><circle class="ln fw" cx="218" cy="42" r="6"/></g>
+  <rect class="fk" x="206" y="84" width="34" height="62"/>
+  <path class="ln" d="M268 146V48M248 52h96M268 52l22-12M290 40l54 12M330 52v26"/>
+  <rect class="fk" x="322" y="78" width="16" height="10"/>
+  <rect class="ln fw" x="290" y="96" width="62" height="50"/>
+  <path class="ln" d="M298 108h46M298 120h46M298 132h46" style="stroke-width:1.6"/>
+  <path class="ln" d="M28 132h344" style="stroke-width:2"/>
+  <path class="ln fw" d="M40 132v-16h120c10 0 16 6 16 16z"/>
+  <path class="ln" d="M58 122h10M78 122h10M98 122h10M118 122h10M138 122h10" style="stroke-width:3"/>
+  <path class="ln" d="M200 18v138"/>
+  <rect class="ln fw" x="20" y="156" width="360" height="9" rx="2"/>
+  <path class="ln fw" d="M8 262h384l8 30H0z"/>
+  <rect class="fk" x="0" y="292" width="400" height="10"/>
+  <path class="ln" d="M30 302v52M370 302v52"/>
+  <rect class="ln fw" x="26" y="250" width="98" height="16" rx="2"/>
+  <rect class="fk" x="32" y="234" width="86" height="16" rx="2"/><text class="tw" x="75" y="246" text-anchor="middle" font-size="10">決算短信</text>
+  <rect class="ln fw" x="22" y="218" width="102" height="16" rx="2"/><text class="tk" x="73" y="230" text-anchor="middle" font-size="10">有価証券報告書</text>
+  <rect class="ln fw" x="36" y="202" width="76" height="16" rx="2"/><text class="tk" x="74" y="214" text-anchor="middle" font-size="10">業界研究</text>
+  <rect class="fk" x="136" y="168" width="150" height="96" rx="7"/>
+  <rect class="fw" x="144" y="176" width="134" height="80" rx="3"/>
+  <path class="ln" d="M154 244h114M154 244V186" style="stroke-width:1.6"/>
+  <rect class="fk" x="164" y="226" width="12" height="18"/><rect class="fk" x="184" y="216" width="12" height="28"/><rect class="fk" x="204" y="220" width="12" height="24"/><rect class="fk" x="224" y="204" width="12" height="40"/><rect class="fk" x="244" y="192" width="12" height="52"/>
+  <path class="ln" d="M164 214l24-10 18 6 22-18 26-8" style="stroke-width:2"/>
+  <path class="ln fw" d="M124 264h174l10 12H114z"/>
+  <g class="steam"><path class="ln" d="M318 214c-6-8 6-12 0-20M330 214c-6-8 6-12 0-20" style="stroke-width:2"/></g>
+  <path class="ln fw" d="M308 222h34v34a8 8 0 0 1-8 8h-18a8 8 0 0 1-8-8z"/>
+  <path class="ln" d="M342 230h6a8 8 0 0 1 0 16h-6"/>
+  <ellipse class="fk" cx="325" cy="223" rx="15" ry="3"/>
+  <path class="fk" d="M368 222c-18-10-22-34-10-50 10 14 14 34 10 50z"/>
+  <path class="ln fw" d="M370 224c4-22 22-34 26-34 2 18-10 30-26 34z"/>
+  <path class="fk" d="M366 224c-10-16-30-18-36-14 6 12 22 18 36 14z"/>
+  <path class="ln fw" d="M354 224h28l-4 40h-20z"/>
+  <path class="ln fw" d="M206 280l70-6 4 10-70 6z"/>
+  <path class="ln" d="M214 284l52-4" style="stroke-width:1.4"/>
+  <path class="fk" d="M140 278l52-6 2 4-52 6z"/>
+  </svg>`;
 }
 
 /* ============ router ============ */
@@ -966,9 +830,10 @@ const scrollMem = {};
 let current = null;
 function go(tab, { replace = false } = {}) {
   if (!TABS.includes(tab)) tab = "home";
-  if (current) scrollMem[current] = window.scrollY;
+  if (current && current !== "home") scrollMem[current] = window.scrollY;
   TABS.forEach(t => { $("#view-" + t).hidden = t !== tab; });
   $$(".tab").forEach(b => b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  document.body.classList.toggle("on-home", tab === "home");
   const prev = current; current = tab;
   if (location.hash.slice(1) !== tab) history[replace ? "replaceState" : "pushState"](null, "", "#" + tab);
   window.scrollTo(0, prev === tab ? 0 : (scrollMem[tab] || 0));
@@ -977,136 +842,129 @@ function go(tab, { replace = false } = {}) {
 window.addEventListener("popstate", () => go(location.hash.slice(1), { replace: true }));
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-tab]"); if (t) go(t.dataset.tab);
-  const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go);
 });
 
 /* ============ HOME ============ */
-function latest(arr) { return arr ? arr[arr.length - 1] : null; }
-function yoy(arr) { if (!arr) return null; const a = arr[arr.length - 2], b = arr[arr.length - 1]; return a ? (b - a) / Math.abs(a) * 100 : null; }
-function spark(arr) {
-  const w = 160, h = 36, p = 3, mn = Math.min(...arr), mx = Math.max(...arr);
-  const pts = arr.map((v, i) => [p + i * (w - 2 * p) / (arr.length - 1), h - p - (mx === mn ? .5 : (v - mn) / (mx - mn)) * (h - 2 * p)]);
-  const line = pts.map(q => q.map(n => n.toFixed(1)).join(",")).join(" ");
-  const last = pts[pts.length - 1];
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polygon points="${p},${h} ${line} ${w - p},${h}" fill="var(--line)"/><polyline points="${line}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="var(--ink)"/></svg>`;
-}
+function fmtDate(s) { s = String(s || ""); return s.length === 8 ? `${s.slice(0, 4)}年${+s.slice(4, 6)}月${+s.slice(6)}日` : s; }
 function renderHome() {
   const d = new Date();
-  $("#today").textContent = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${"日月火水木金土"[d.getDay()]}`;
-  const nCo = INDUSTRIES.reduce((s, i) => s + i.companies.length, 0);
-  const nReg = Object.values(REGION_COS).reduce((s, a) => s + a.length, 0);
-  $("#hero").innerHTML = `
-    <svg class="hero-art" viewBox="0 0 400 240" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
-      <circle cx="330" cy="40" r="90" fill="none" stroke="currentColor" stroke-opacity=".18" stroke-width="28"/>
-      <rect x="250" y="120" width="26" height="60" rx="4" fill="currentColor" fill-opacity=".14"/>
-      <rect x="288" y="95" width="26" height="85" rx="4" fill="currentColor" fill-opacity=".2"/>
-      <rect x="326" y="60" width="26" height="120" rx="4" fill="currentColor" fill-opacity=".3"/>
-      <rect x="364" y="20" width="26" height="160" rx="4" fill="currentColor"/>
-    </svg>
-    <div class="eyebrow" style="color:inherit;opacity:.6">広告ではなく、決算から</div>
-    <p class="big">決算で、<br>企業を読む。</p>
-    <div class="stats"><span><b>${INDUSTRIES.length}</b>業界</span><span><b>${nCo}</b>社の5年決算</span><span><b>${nReg}</b>社の本社マップ</span></div>`;
-
-  const picks = [["auto", "toyota"], ["elec", "sony"], ["trade", "mc"], ["retail", "fr"], ["it", "ntt"], ["semi", "tel"], ["fin", "mufg"]];
-  $("#watchlist").innerHTML = picks.map(([iid, cid]) => {
-    const ind = findInd(iid), c = ind.companies.find(x => x.id === cid);
-    const key = ind.sizeKey, y = yoy(c[key]);
-    return `<button class="watch" data-ind="${iid}" data-co="${cid}">
-      <span class="name"><span>${esc(c.short)}</span><span class="muted" style="font-weight:500">${esc(ind.labels[key])}</span></span>
-      <span class="val num">${fmtOku(latest(c[key]))}</span>
-      <span class="yoy ${y >= 0 ? "up" : "down"}">${y >= 0 ? "▲" : "▼"} ${pct(y)}<span class="muted" style="font-weight:500"> 前期比</span></span>
-      ${spark(c[key])}
-    </button>`;
-  }).join("");
-
-  $("#indGrid").innerHTML = INDUSTRIES.map(ind => {
-    const tot = ind.companies.reduce((s, c) => s + latest(c[ind.sizeKey]), 0);
-    return `<button class="ind-tile" data-ind="${ind.id}">
-      <span class="t">${esc(ind.name)}</span>
-      <span><span class="v num">${fmtOku(tot)}</span><br><span class="m">主要${ind.companies.length}社の${esc(ind.labels[ind.sizeKey])}合計</span></span>
-    </button>`;
-  }).join("");
-
-  const day = Math.floor(Date.now() / 864e5);
-  const t = TERMS[day % TERMS.length];
-  $("#term").innerHTML = `<div class="eyebrow">Term ${String(day % TERMS.length + 1).padStart(2, "0")} / ${String(TERMS.length).padStart(2, "0")}</div><div class="w">${esc(t.w)}</div><div class="formula">${esc(t.f)}</div><p class="sub" style="font-size:14px">${esc(t.d)}</p>`;
-
-  // teaser mini map
-  const cs = 8.6;
-  $("#teaserMap").innerHTML = TILES.map(([n, c, r, s = 1]) => {
-    const on = REGIONS.find(x => x.id === "tk").prefs.includes(n);
-    return `<rect x="${c * cs}" y="${r * cs}" width="${s * cs - 1.6}" height="${s * cs - 1.6}" rx="1.6" fill="${on ? "var(--ink)" : "var(--tile)"}"/>`;
-  }).join("");
-
-  $$("#watchlist .watch, #indGrid .ind-tile").forEach(b => b.addEventListener("click", () => {
-    selectIndustry(b.dataset.ind, b.dataset.co); go("industry");
-  }));
+  $("#today").innerHTML = `${d.getFullYear()}<br>${d.getMonth() + 1}.${d.getDate()} ${"SUN MON TUE WED THU FRI SAT".split(" ")[d.getDay()]}`;
+  $("#homeArt").innerHTML = homeArt();
+  const nListed = LISTED ? LISTED.list.length : null;
+  const nDeep = INDUSTRIES.reduce((s, i) => s + i.companies.length, 0);
+  const nNews = NEWS ? NEWS.items.length : 0;
+  $("#homeInfo").innerHTML = nListed
+    ? `<span class="l">全上場企業（東証 ${esc(fmtDate(LISTED.asOf))}時点）</span>
+       <span class="big">${nListed.toLocaleString("ja-JP")}<small>社</small></span>
+       <span class="meta"><span>${LISTED.sectors.length}業種</span><span>${INDUSTRIES.length}業界・${nDeep}社の5年決算</span>${nNews ? `<span>今日のニュース ${nNews}件</span>` : ""}</span>`
+    : `<span class="l">詳しく見られる業界</span>
+       <span class="big">${INDUSTRIES.length}<small>業界</small></span>
+       <span class="meta"><span>${nDeep}社の5年決算</span><span>最新：2026年3月期</span></span>`;
 }
 
 /* ============ dark menu (swipe up) ============ */
 const MENU_NOW = [
-  ["compare", "企業を比較する", "5年分の売上・利益をグラフで", () => go("industry")],
-  ["network", "業界相関図", "資本・提携・競合の関係を見る", () => { go("industry"); setTimeout(() => $("#net").scrollIntoView({ behavior: "smooth" }), 60); }],
+  ["compare", "企業を比較する", "5年分の売上・利益をグラフで", () => { go("industry"); setMode("deep"); }],
+  ["list", "全上場企業を探す", "33業種・約3,700社から検索", () => { go("industry"); setMode("all"); }],
+  ["network", "業界相関図", "資本・提携・競合の関係を見る", () => { go("industry"); setMode("deep"); setTimeout(() => $("#net").scrollIntoView({ behavior: "smooth" }), 60); }],
+  ["news", "今日の業界ニュース", "影響がありそうな業界つき", () => go("news")],
   ["pin", "地方から探す", "本社の所在地から企業を探す", () => go("region")],
-  ["news", "ニュースを読む", "業界ストーリーとフィード", () => go("news")],
   ["pen", "ストーリーを投稿", "企業ニュースやメモを共有", () => { go("news"); openPost(); }]
 ];
 const MENU_SOON = [
-  ["search", "企業検索", "社名・証券コードで横断検索"],
+  ["yen", "全社の決算データ", "EDINET連携で約3,700社の業績を自動取得"],
   ["bell", "決算アラート", "ウォッチ企業の決算発表を通知"],
   ["calendar", "決算カレンダー", "業界ごとの発表スケジュール"],
-  ["doc", "EDINET連携", "有価証券報告書から自動取得"],
   ["book", "財務指標の用語集", "ROE・自己資本比率などを解説"],
-  ["chart", "就活メモ・ES管理", "企業ごとの研究ノート"]
+  ["doc", "就活メモ・ES管理", "企業ごとの研究ノート"]
 ];
+function spark(arr) {
+  const pts0 = arr.map((v, i) => [i, v]).filter(p => p[1] != null);
+  const w = 160, h = 34, p = 3, vals = pts0.map(q => q[1]), mn = Math.min(...vals), mx = Math.max(...vals);
+  const pts = pts0.map(([i, v]) => [p + i * (w - 2 * p) / (arr.length - 1), h - p - (mx === mn ? .5 : (v - mn) / (mx - mn)) * (h - 2 * p)]);
+  const line = pts.map(q => q.map(n => n.toFixed(1)).join(",")).join(" ");
+  const last = pts[pts.length - 1];
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${line}" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="#fff"/></svg>`;
+}
 function renderMenu() {
   $("#menuNow").innerHTML = MENU_NOW.map((m, i) => `<button class="mi" data-mi="${i}">${ic(m[0])}<span><span class="t">${m[1]}</span><br><span class="d">${m[2]}</span></span></button>`).join("");
   $("#menuSoon").innerHTML = MENU_SOON.map(m => `<button class="mi coming" data-soon="${m[1]}">${ic(m[0])}<span><span class="t">${m[1]}</span><br><span class="d">${m[2]}</span></span><span class="soon">COMING SOON</span></button>`).join("");
   $("#menuNow").addEventListener("click", e => { const b = e.target.closest("[data-mi]"); if (!b) return; closeMenu(); MENU_NOW[+b.dataset.mi][3](); });
   $("#menuSoon").addEventListener("click", e => { const b = e.target.closest("[data-soon]"); if (b) toast(`「${b.dataset.soon}」は今後追加予定です`); });
+
+  const picks = [["auto", "toyota"], ["elec", "sony"], ["semi", "advantest"], ["fin", "mufg"], ["trade", "itochu"], ["retail", "fr"], ["game", "nintendo"]];
+  $("#watchlist").innerHTML = picks.map(([iid, cid]) => {
+    const ind = findInd(iid), c = ind.companies.find(x => x.id === cid), key = ind.sizeKey, y = yoyText(c[key][LAST - 1], c[key][LAST]);
+    return `<button class="watch" data-ind="${iid}" data-co="${cid}">
+      <span class="name"><span>${esc(c.short)}</span><span style="color:#8a8f99;font-weight:500">${esc(ind.labels[key])}</span></span>
+      <span class="val num">${fmtOku(lastVal(c[key]))}</span>
+      <span class="yoy ${y.cls}">${y.cls === "up" ? "▲" : "▼"} ${y.t}<span style="color:#8a8f99;font-weight:500"> ${esc(c.fy)}</span></span>
+      ${spark(c[key])}
+    </button>`;
+  }).join("");
+  $("#watchlist").addEventListener("click", e => {
+    const b = e.target.closest(".watch"); if (!b) return;
+    closeMenu(); go("industry"); setMode("deep"); selectIndustry(b.dataset.ind, b.dataset.co);
+  });
+
+  const top = NEWS ? NEWS.items.slice(0, 3) : [];
+  $("#menuNews").innerHTML = top.length ? top.map(n => `<a class="headline" href="${esc(n.url)}" target="_blank" rel="noopener"><b>${esc(n.t)}</b><span>${esc(n.src)} · ${esc(timeLabel(n.at))}</span></a>`).join("")
+    : `<p class="lead">ニュースはまだ取得されていません。</p>`;
+
+  const day = Math.floor(Date.now() / 864e5), t = D.terms[day % D.terms.length];
+  $("#term").innerHTML = `<div class="eyebrow">Term ${String(day % D.terms.length + 1).padStart(2, "0")} / ${String(D.terms.length).padStart(2, "0")}</div><div class="w">${esc(t.w)}</div><div class="formula">${esc(t.f)}</div><p class="lead" style="font-size:14px">${esc(t.d)}</p>`;
 }
 const menu = $("#menu");
+const homeEl = $("#home");
 function openMenu() {
   menu.classList.remove("dragging"); menu.style.transform = "";
   menu.classList.add("open"); menu.setAttribute("aria-hidden", "false");
+  homeEl.style.transform = "";
   $("#pull").setAttribute("aria-expanded", "true"); document.body.classList.add("locked");
   setTimeout(() => $("#menuClose").focus({ preventScroll: true }), 300);
 }
 function closeMenu() {
   menu.classList.remove("dragging"); menu.style.transform = "";
   menu.classList.remove("open"); menu.setAttribute("aria-hidden", "true");
+  homeEl.style.transform = "";
   $("#pull").setAttribute("aria-expanded", "false"); document.body.classList.remove("locked");
 }
-(function menuGestures() {
+(function homeGestures() {
+  // the home screen responds only to an upward swipe (touch, mouse drag, wheel or arrow key)
   const H = () => window.innerHeight;
-  let drag = null;
-  // swipe up: from the pull button, or anywhere on home when already at the bottom of the page
-  const atBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
-  function start(y, fromPull) { drag = { y0: y, dy: 0, fromPull, armed: fromPull }; }
-  $("#pull").addEventListener("click", () => { if (!drag || Math.abs(drag.dy) < 6) openMenu(); });
   const home = $("#view-home");
-  home.addEventListener("touchstart", e => {
+  let drag = null;
+  home.addEventListener("pointerdown", e => {
     if (menu.classList.contains("open")) return;
-    const fromPull = !!e.target.closest("#pull");
-    if (fromPull || atBottom()) start(e.touches[0].clientY, fromPull);
-  }, { passive: true });
-  home.addEventListener("touchmove", e => {
-    if (!drag) return;
-    drag.dy = e.touches[0].clientY - drag.y0;
-    if (!drag.armed && drag.dy < -24) drag.armed = true;
-    if (drag.armed && drag.dy < 0) {
+    drag = { y0: e.clientY, dy: 0, id: e.pointerId, onPull: !!e.target.closest("#pull") };
+    try { home.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  home.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag.dy = Math.min(0, e.clientY - drag.y0);
+    if (drag.dy < -6) {
       menu.classList.add("dragging");
-      menu.style.transform = `translateY(${Math.max(0, H() + drag.dy)}px)`;
+      menu.style.transform = `translateY(${Math.max(0, H() + drag.dy * 1.15)}px)`;
+      homeEl.style.transform = `translateY(${drag.dy * 0.25}px)`;
     }
-  }, { passive: true });
-  home.addEventListener("touchend", () => {
+  });
+  home.addEventListener("pointerup", () => {
     if (!drag) return;
     const d = drag; drag = null;
-    if (!d.armed) return;
-    if (d.dy < -70) openMenu(); else closeMenu();
-    if (d.fromPull && Math.abs(d.dy) >= 6) { drag = { dy: d.dy }; setTimeout(() => { drag = null; }, 400); }
+    if (d.dy < -60 || (d.onPull && d.dy > -6)) openMenu(); else closeMenu();
   });
-  // swipe down to close (when menu content is scrolled to top)
+  home.addEventListener("pointercancel", () => { drag = null; closeMenu(); });
+  $("#pull").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openMenu(); } });
+  let wheelAcc = 0;
+  home.addEventListener("wheel", e => {
+    e.preventDefault();
+    if (menu.classList.contains("open") || e.deltaY <= 0) { wheelAcc = 0; return; }
+    wheelAcc += e.deltaY; if (wheelAcc > 80) { wheelAcc = 0; openMenu(); }
+  }, { passive: false });
+  document.addEventListener("keydown", e => {
+    if (current === "home" && !menu.classList.contains("open") && !sv && ["ArrowUp", "PageDown"].includes(e.key)) { e.preventDefault(); openMenu(); }
+  });
+  // swipe down to close (when the menu is scrolled to the top)
   let dn = null;
   menu.addEventListener("touchstart", e => { if (menu.scrollTop <= 0) dn = { y0: e.touches[0].clientY, dy: 0 }; }, { passive: true });
   menu.addEventListener("touchmove", e => {
@@ -1116,20 +974,36 @@ function closeMenu() {
   }, { passive: true });
   menu.addEventListener("touchend", () => { if (!dn) return; const d = dn.dy; dn = null; d > 90 ? closeMenu() : openMenu(); });
   $("#menuClose").addEventListener("click", closeMenu);
-  // desktop: wheel up past the bottom of home also opens it
-  let wheelAcc = 0;
-  window.addEventListener("wheel", e => {
-    if (current !== "home" || menu.classList.contains("open") || !atBottom() || e.deltaY <= 0) { wheelAcc = 0; return; }
-    wheelAcc += e.deltaY; if (wheelAcc > 260) { wheelAcc = 0; openMenu(); }
-  }, { passive: true });
 })();
 
-/* ============ NEWS: stories ============ */
+/* ============ NEWS ============ */
+function timeLabel(iso) {
+  const t = new Date(iso); if (isNaN(t)) return "";
+  const h = (Date.now() - t) / 36e5;
+  if (h < 1) return Math.max(1, Math.round(h * 60)) + "分前";
+  if (h < 24) return Math.round(h) + "時間前";
+  return `${t.getMonth() + 1}/${t.getDate()}`;
+}
+const SIGN = { "+": ["p", "＋"], "-": ["m", "−"], "~": ["n", "±"] };
+function impactHTML(n, max = 6) {
+  const themes = (n.themes || []).map(t => `<span class="theme">${esc(t)}</span>`);
+  const inds = Object.entries(n.impact || {}).slice(0, max).map(([id, s]) => `<span class="${SIGN[s][0]}"><i>${SIGN[s][1]}</i>${esc(IND_NAME[id] || id)}</span>`);
+  return `<div class="imp">${themes.join("")}${inds.join("")}</div>`;
+}
 let userStories = store.get("stories", []);
 let seen = new Set(store.get("seen", []));
 function storyGroups() {
-  const g = STORIES.map(s => ({ ...s, user: false }));
-  if (userStories.length) g.unshift({ id: "me", name: "あなた", user: true, seed: 1, slides: userStories.slice().reverse().map(u => ({ k: u.ind, t: u.company || "メモ", b: u.text, img: u.img, uid: u.id, at: u.at })) });
+  const g = [];
+  if (userStories.length) g.push({ id: "me", name: "あなた", user: true, seed: 1, slides: userStories.slice().reverse().map(u => ({ k: u.ind, t: u.company || "メモ", b: u.text, img: u.img, uid: u.id, at: u.at })) });
+  if (NEWS && NEWS.items.length) {
+    const by = {};
+    NEWS.items.forEach(n => { const k = n.main || n.inds[0]; (by[k] = by[k] || []).push(n); });
+    Object.entries(by).sort((a, b) => b[1].length - a[1].length).forEach(([id, list], i) => {
+      g.push({ id: "n-" + id, name: IND_NAME[id] || id, seed: i + 2, slides: list.slice(0, 4).map(n => ({ k: `${n.src} · ${timeLabel(n.at)}`, t: n.t, news: n, uid: n.url.slice(-24) })) });
+    });
+  } else {
+    D.stories.forEach(s => g.push({ ...s }));
+  }
   return g;
 }
 function renderStories() {
@@ -1149,7 +1023,6 @@ const viewer = $("#viewer");
 let sv = null;
 function openViewer(gi) {
   sv = { groups: storyGroups(), gi, si: 0 };
-  // start at the first unseen slide
   const g = sv.groups[gi]; const f = g.slides.findIndex((s, j) => !seen.has(`${g.id}:${s.uid || j}`));
   sv.si = f > 0 ? f : 0;
   viewer.hidden = false; document.body.classList.add("locked");
@@ -1157,12 +1030,24 @@ function openViewer(gi) {
 }
 function closeViewer() {
   viewer.hidden = true; viewer.innerHTML = ""; sv = null;
-  document.body.classList.remove("locked"); renderStories();
+  if (current !== "home") document.body.classList.remove("locked");
+  renderStories();
 }
 function drawSlide() {
   const g = sv.groups[sv.gi], s = g.slides[sv.si];
-  seen.add(`${g.id}:${s.uid || sv.si}`); store.set("seen", [...seen]);
-  const when = s.at ? new Date(s.at).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "業界トピック";
+  seen.add(`${g.id}:${s.uid || sv.si}`); store.set("seen", [...seen].slice(-400));
+  const when = s.at ? new Date(s.at).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : (s.news ? "今日のニュース" : "業界トピック");
+  let body;
+  if (s.news) {
+    body = `<div class="slide-media">${illo(g.seed + sv.si, { big: g.name.length > 5 ? g.name.slice(0, 5) : g.name, tag: "NEWS" })}</div>
+      <div class="k">${esc(s.k)}</div><h3>${esc(s.t)}</h3>
+      <p>影響が考えられる業界</p>${impactHTML(s.news)}
+      <a class="open" href="${esc(s.news.url)}" target="_blank" rel="noopener">記事を読む ${ic("ext", "ic ic-sm")}</a>`;
+  } else {
+    body = `<div class="slide-media">${s.img ? `<img src="${s.img}" alt="">` : illo(g.seed + sv.si, { big: s.big || "", unit: s.unit || "", tag: s.k })}</div>
+      <div class="k">${esc(s.k || "")}</div><h3>${esc(s.t)}</h3><p>${esc(s.b)}</p>
+      ${g.user ? `<button class="del" id="svDel">${ic("trash", "ic ic-sm")}この投稿を削除</button>` : ""}`;
+  }
   viewer.classList.remove("paused");
   viewer.innerHTML = `<div class="viewer-inner">
     <div class="bars">${g.slides.map((_, j) => `<span class="${j < sv.si ? "done" : j === sv.si ? "cur" : ""}"><i></i></span>`).join("")}</div>
@@ -1172,13 +1057,7 @@ function drawSlide() {
       <span class="sp"></span>
       <button id="svClose" aria-label="閉じる">${ic("x")}</button>
     </div>
-    <div class="slide">
-      <div class="slide-media">${s.img ? `<img src="${s.img}" alt="">` : illo(g.seed + sv.si, { big: s.big || "", unit: s.unit || "", tag: s.k })}</div>
-      <div class="k">${esc(s.k || "")}</div>
-      <h3>${esc(s.t)}</h3>
-      <p>${esc(s.b)}</p>
-      ${g.user ? `<button class="del" id="svDel">${ic("trash", "ic ic-sm")}この投稿を削除</button>` : ""}
-    </div>
+    <div class="slide">${body}</div>
     <div class="tapzone l" data-z="prev"></div><div class="tapzone r" data-z="next"></div>
     <div class="hint">タップで次へ／長押しで一時停止／下にスワイプで閉じる</div>
   </div>`;
@@ -1207,15 +1086,15 @@ function prevSlide() {
 (function viewerGestures() {
   let p = null;
   viewer.addEventListener("pointerdown", e => {
-    if (e.target.closest("button")) return;
+    if (e.target.closest("button, a")) return;
     p = { x: e.clientX, y: e.clientY, t: Date.now(), z: e.target.closest("[data-z]")?.dataset.z };
     viewer.classList.add("paused");
   });
   viewer.addEventListener("pointermove", e => {
     if (!p) return; const dy = e.clientY - p.y;
-    if (dy > 0) $(".viewer-inner", viewer).style.transform = `translateY(${dy * .6}px)`;
+    const inner = $(".viewer-inner", viewer); if (dy > 0 && inner) inner.style.transform = `translateY(${dy * .6}px)`;
   });
-  const end = e => {
+  viewer.addEventListener("pointerup", e => {
     if (!p) return; const q = p; p = null;
     const inner = $(".viewer-inner", viewer); if (inner) inner.style.transform = "";
     viewer.classList.remove("paused");
@@ -1223,14 +1102,39 @@ function prevSlide() {
     if (dy > 90) return closeViewer();
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return dx < 0 ? nextSlide() : prevSlide();
     if (held < 280 && Math.abs(dx) < 10 && Math.abs(dy) < 10 && q.z) q.z === "next" ? nextSlide() : prevSlide();
-  };
-  viewer.addEventListener("pointerup", end);
+  });
   viewer.addEventListener("pointercancel", () => { p = null; viewer.classList.remove("paused"); });
   document.addEventListener("keydown", e => {
     if (sv) { if (e.key === "Escape") closeViewer(); if (e.key === "ArrowRight") nextSlide(); if (e.key === "ArrowLeft") prevSlide(); return; }
     if (e.key === "Escape") { if ($("#sheetRoot").firstChild) closeSheet(); else if (menu.classList.contains("open")) closeMenu(); }
   });
 })();
+
+// today's news list
+let newsFilter = "all", newsShown = 20;
+function renderNews() {
+  if (!NEWS || !NEWS.items.length) {
+    $("#newsUpdated").textContent = "News";
+    $("#newsFilter").innerHTML = "";
+    $("#newsList").innerHTML = `<div class="empty">今日のニュースはまだ取得されていません。GitHub Actions が毎朝自動で集めます。</div>`;
+    $("#newsMore").hidden = true;
+    return;
+  }
+  const b = new Date(NEWS.built);
+  $("#newsUpdated").textContent = `${b.getMonth() + 1}/${b.getDate()} ${String(b.getHours()).padStart(2, "0")}:${String(b.getMinutes()).padStart(2, "0")} 更新`;
+  const counts = {};
+  NEWS.items.forEach(n => n.inds.forEach(i => counts[i] = (counts[i] || 0) + 1));
+  const ids = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  $("#newsFilter").innerHTML = `<button class="chip" aria-pressed="${newsFilter === "all"}" data-nf="all">すべて<span class="cnt">${NEWS.items.length}</span></button>` +
+    ids.map(i => `<button class="chip" aria-pressed="${newsFilter === i}" data-nf="${i}">${esc(IND_NAME[i] || i)}<span class="cnt">${counts[i]}</span></button>`).join("");
+  const list = NEWS.items.filter(n => newsFilter === "all" || n.inds.includes(newsFilter));
+  $("#newsList").innerHTML = list.slice(0, newsShown).map(n => `<a class="news" href="${esc(n.url)}" target="_blank" rel="noopener">
+      <span class="src"><span>${esc(n.src)}</span><span>${esc(timeLabel(n.at))}</span></span>
+      <b>${esc(n.t)}</b>${impactHTML(n)}</a>`).join("");
+  $("#newsMore").hidden = list.length <= newsShown;
+}
+$("#newsFilter").addEventListener("click", e => { const b = e.target.closest("[data-nf]"); if (!b) return; newsFilter = b.dataset.nf; newsShown = 20; renderNews(); });
+$("#newsMore").addEventListener("click", () => { newsShown += 20; renderNews(); });
 
 /* ============ bottom sheets: post & comments ============ */
 function openSheet(html, onMount) {
@@ -1266,11 +1170,11 @@ function openPost() {
     <div class="sheet-head"><h2 class="h2">ストーリーを投稿</h2><button data-close aria-label="閉じる">${ic("x")}</button></div>
     <form class="form" id="postForm">
       <div class="field"><label for="pInd">業界</label>
-        <select class="input" id="pInd">${STORIES.map(s => `<option>${esc(s.name)}</option>`).join("")}<option>その他</option></select></div>
+        <select class="input" id="pInd">${INDUSTRIES.map(s => `<option>${esc(s.name)}</option>`).join("")}<option>その他</option></select></div>
       <div class="field"><label for="pCo">企業名・タイトル</label><input class="input" id="pCo" maxlength="30" placeholder="例：イビデン 決算説明会メモ" required></div>
       <div class="field"><label for="pText">本文</label><textarea class="input" id="pText" maxlength="200" placeholder="気づいたこと、ニュースの要点など（200字まで）" required></textarea><span class="counter" id="pCount">0 / 200</span></div>
       <div class="field"><span class="lbl">画像（任意）</span>
-        <label class="upload" for="pImg" id="pDrop">${ic("image")}<span id="pImgLbl">タップして画像を選ぶ</span></label>
+        <label class="upload" for="pImg" id="pDrop">${ic("image")}<span>タップして画像を選ぶ</span></label>
         <input type="file" id="pImg" accept="image/*" hidden></div>
       <button class="btn" type="submit" id="pSubmit">投稿する</button>
       <p class="note">投稿はこの端末のブラウザ内にだけ保存されます（他の人には表示されません）。</p>
@@ -1298,14 +1202,14 @@ function openPost() {
   });
 }
 
-/* ============ NEWS: feed ============ */
 let likes = store.get("likes", {});
 let saves = store.get("saves", {});
 let comments = store.get("comments", {});
+const POSTS = D.posts;
 function postHTML(p) {
   const liked = !!likes[p.id], n = p.likes + (liked ? 1 : 0), cs = comments[p.id] || [];
   return `<article class="post" data-post="${p.id}">
-    <div class="post-head"><span class="logo">${esc(p.co.slice(0, 1))}</span><span class="who"><b>${esc(p.co)}</b><span>${esc(p.ind)} · ${esc(p.date)}</span></span></div>
+    <div class="post-head"><span class="logo">${esc(p.co.slice(0, 1))}</span><span class="who"><b>${esc(p.co)}</b><span>${esc(IND_NAME[p.ind] || "")} · ${esc(p.date)}</span></span></div>
     <div class="post-media" data-dbl>${illo(p.seed, { big: p.big, unit: p.unit, tag: p.cap })}<div class="pop">${ic("heart")}</div></div>
     <div class="post-actions">
       <button class="act like" aria-pressed="${liked}" aria-label="いいね">${ic("heart")}</button>
@@ -1320,16 +1224,16 @@ function postHTML(p) {
       <p class="clamp">${esc(p.body)}</p>
       <button class="more">続きを読む</button>
       <button class="cm" data-cm>${cs.length ? `コメント${cs.length}件をすべて見る` : "コメントを書く"}</button>
-      <span class="src">出典：各社決算資料をもとにしたサンプル要約</span>
+      <span class="src">出典：各社の決算短信・決算発表の報道をもとに要約</span>
     </div>
   </article>`;
 }
 function renderFeed() { $("#feed").innerHTML = POSTS.map(postHTML).join(""); }
 function refreshPost(id) {
   const el = $(`[data-post="${id}"]`); const p = POSTS.find(x => x.id === id);
-  const clampOpen = !$(".post-body p", el).classList.contains("clamp");
+  const open = !$(".post-body p", el).classList.contains("clamp");
   el.outerHTML = postHTML(p);
-  if (clampOpen) { const n = $(`[data-post="${id}"]`); $(".post-body p", n).classList.remove("clamp"); $(".more", n).hidden = true; }
+  if (open) { const n = $(`[data-post="${id}"]`); $(".post-body p", n).classList.remove("clamp"); $(".more", n).hidden = true; }
 }
 function toggleLike(id, force) {
   likes[id] = force ?? !likes[id]; if (!likes[id]) delete likes[id];
@@ -1343,7 +1247,6 @@ $("#feed").addEventListener("click", e => {
   if (e.target.closest(".more")) { $(".post-body p", post).classList.remove("clamp"); e.target.closest(".more").hidden = true; return; }
   if (e.target.closest("[data-cm]")) return openComments(id);
 });
-// double-tap image to like
 (function dblTap() {
   let last = 0, lastId = null;
   $("#feed").addEventListener("pointerup", e => {
@@ -1366,7 +1269,7 @@ function openComments(id) {
   openSheet(`<span class="grabber" aria-hidden="true"></span>
     <div class="sheet-head"><div><h2 class="h2">コメント</h2><span class="sub">${esc(p.co)}｜${esc(p.title)}</span></div><button data-close aria-label="閉じる">${ic("x")}</button></div>
     <div class="comments" id="cList">${list()}</div>
-    <form class="cform" id="cForm"><input class="input" id="cIn" aria-label="コメント" maxlength="140" placeholder="コメントを追加…" autocomplete="off"><button class="btn" type="submit" aria-label="送信">${ic("arrow")}</button></form>`, root => {
+    <form class="cform" id="cForm"><input class="input" id="cIn" maxlength="140" placeholder="コメントを追加…" autocomplete="off" aria-label="コメント"><button class="btn" type="submit" aria-label="送信">${ic("arrow")}</button></form>`, root => {
     $("#cForm", root).addEventListener("submit", e => {
       e.preventDefault();
       const v = $("#cIn", root).value.trim(); if (!v) return;
@@ -1378,72 +1281,76 @@ function openComments(id) {
 }
 
 /* ============ INDUSTRY ============ */
-let indState = { id: store.get("ind", "auto"), metric: null, visible: {}, sel: null, edgeOn: { cap: true, ally: true, supply: true, comp: true } };
+let indState = { mode: "deep", id: store.get("ind", "auto"), metric: null, sel: null, netSel: null, edgeOn: { cap: true, ally: true, supply: true, comp: true } };
 let chart = null;
 function curInd() { return findInd(indState.id) || INDUSTRIES[0]; }
 function metricsOf(ind) {
-  const m = ind.metrics.map(k => ({ key: k, label: ind.labels[k], unit: "oku" }));
-  if (ind.metrics.includes("rev")) m.push({ key: "margin", label: ind.labels[ind.profitKey] + "率", unit: "pct" });
+  const m = ind.metrics.map(k => ({ key: k, label: ind.labels[k] }));
+  if (ind.metrics.includes("rev")) m.push({ key: "margin", label: ind.labels[ind.profitKey] + "率" });
   return m;
 }
 function series(ind, c, key) {
-  if (key === "margin") return c.rev.map((r, i) => c[ind.profitKey][i] / r * 100);
+  if (key === "margin") return c.rev.map((r, i) => r == null || c[ind.profitKey][i] == null ? null : c[ind.profitKey][i] / r * 100);
   return c[key];
 }
+function setMode(mode) {
+  indState.mode = mode;
+  $("#indMode").innerHTML = `<button aria-pressed="${mode === "deep"}" data-mode="deep">詳しく見る（${INDUSTRIES.length}業界）</button><button aria-pressed="${mode === "all"}" data-mode="all">全上場企業${LISTED ? `（${LISTED.list.length.toLocaleString("ja-JP")}社）` : ""}</button>`;
+  $("#deepPane").hidden = mode !== "deep";
+  $("#allPane").hidden = mode !== "all";
+  if (mode === "deep") renderChart(); else renderAll();
+}
+$("#indMode").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); });
+
 function selectIndustry(id, focusCo) {
+  if (indState.id !== id) { indState.metric = null; indState.netSel = null; }
   indState.id = id; store.set("ind", id);
-  const ind = curInd();
-  indState.metric = ind.metrics[0];
   indState.sel = focusCo || null;
-  if (!indState.visible[id]) indState.visible[id] = Object.fromEntries(ind.companies.map(c => [c.id, true]));
-  if (focusCo) indState.visible[id][focusCo] = true;
   renderIndustry();
+  if (focusCo) setTimeout(() => $("#coDetail").scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+}
+function selectCompany(cid) {
+  indState.sel = indState.sel === cid ? null : cid;
+  indState.netSel = indState.sel;
+  $$("#coChips [data-c]").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === indState.sel));
+  $$("#finTable tbody tr").forEach(r => r.classList.toggle("sel", r.dataset.c === indState.sel));
+  renderChart(); renderProfile(); renderNet();
+  if (indState.sel) setTimeout(() => $("#coDetail").scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
 }
 function renderIndustry() {
   const ind = curInd();
-  if (!indState.visible[ind.id]) indState.visible[ind.id] = Object.fromEntries(ind.companies.map(c => [c.id, true]));
   if (!indState.metric) indState.metric = ind.metrics[0];
-
   $("#indNav").innerHTML = INDUSTRIES.map(i => `<button class="chip" aria-pressed="${i.id === ind.id}" data-i="${i.id}">${esc(i.name)}</button>`).join("");
   $("#fyNote").textContent = ind.fyNote;
+  $("#indDisclaimer").textContent = `財務数値は各社の決算短信・決算発表の報道をもとにした概数（億円、${D.updated}時点）。${ind.note} 会計基準や決算期が企業により異なるため、厳密な比較には有価証券報告書を参照してください。`;
 
-  // summary
   const pk = ind.profitKey, sk = ind.sizeKey;
-  const totS = ind.companies.reduce((s, c) => s + latest(c[sk]), 0);
-  const prevS = ind.companies.reduce((s, c) => s + c[sk][3], 0);
-  const top = ind.companies.slice().sort((a, b) => latest(b[pk]) - latest(a[pk]))[0];
+  const withBoth = ind.companies.filter(c => c[sk][LAST] != null && c[sk][LAST - 1] != null);
+  const totS = ind.companies.reduce((s, c) => s + (c[sk][LAST] || 0), 0);
+  const ys = withBoth.length ? growth(withBoth.reduce((s, c) => s + c[sk][LAST - 1], 0), withBoth.reduce((s, c) => s + c[sk][LAST], 0)) : null;
+  const top = ind.companies.slice().sort((a, b) => (b[pk][LAST] ?? -1e9) - (a[pk][LAST] ?? -1e9))[0];
   let third;
   if (ind.metrics.includes("rev")) {
-    const best = ind.companies.map(c => ({ c, m: latest(c[pk]) / latest(c.rev) * 100 })).sort((a, b) => b.m - a.m)[0];
-    third = `<div class="stat"><span class="l">${esc(ind.labels[pk])}率トップ</span><span class="v num">${best.m.toFixed(1)}%</span><span class="s">${esc(best.c.short)}</span></div>`;
+    const best = ind.companies.filter(c => c.rev[LAST] && c[pk][LAST] != null).map(c => ({ c, m: c[pk][LAST] / c.rev[LAST] * 100 })).sort((a, b) => b.m - a.m)[0];
+    third = `<div class="stat"><span class="l">${esc(ind.labels[pk])}率トップ</span><span class="v num">${best ? best.m.toFixed(1) + "%" : "—"}</span><span class="s">${best ? esc(best.c.short) : ""}</span></div>`;
   } else {
-    const g = ind.companies.map(c => ({ c, g: (latest(c[pk]) / c[pk][0] - 1) * 100 })).sort((a, b) => b.g - a.g)[0];
-    third = `<div class="stat"><span class="l">5年の伸びトップ</span><span class="v num">${pct(g.g, 0)}</span><span class="s">${esc(g.c.short)}（FY2020比）</span></div>`;
+    const g = ind.companies.map(c => ({ c, g: growth(c[pk][0], c[pk][LAST]) })).filter(x => x.g != null).sort((a, b) => b.g - a.g)[0];
+    third = `<div class="stat"><span class="l">4年の伸びトップ</span><span class="v num">${g ? pct(g.g, 0) : "—"}</span><span class="s">${g ? esc(g.c.short) + "（FY2021比）" : ""}</span></div>`;
   }
-  const ys = (totS - prevS) / Math.abs(prevS) * 100;
   $("#summary").innerHTML = `
-    <div class="stat"><span class="l">主要${ind.companies.length}社の${esc(ind.labels[sk])}合計</span><span class="v num">${fmtOku(totS)}</span><span class="s ${ys >= 0 ? "up" : "down"}">${ys >= 0 ? "▲" : "▼"} ${pct(ys)} 前期比</span></div>
-    <div class="stat"><span class="l">${esc(ind.labels[pk])}トップ</span><span class="v num">${fmtOku(latest(top[pk]))}</span><span class="s">${esc(top.short)}</span></div>
+    <div class="stat"><span class="l">主要${ind.companies.length}社の${esc(ind.labels[sk])}合計（FY2025）</span><span class="v num">${fmtOku(totS)}</span><span class="s ${ys >= 0 ? "up" : "down"}">${ys == null ? "" : (ys >= 0 ? "▲ " : "▼ ") + pct(ys) + " 前期比"}</span></div>
+    <div class="stat"><span class="l">${esc(ind.labels[pk])}トップ</span><span class="v num">${fmtOku(top[pk][LAST])}</span><span class="s">${esc(top.short)}</span></div>
     ${third}`;
 
-  // metric segmented
   $("#metricSeg").innerHTML = metricsOf(ind).map(m => `<button aria-pressed="${m.key === indState.metric}" data-m="${m.key}">${esc(m.label)}</button>`).join("");
-  // company chips = legend + toggles
-  const vis = indState.visible[ind.id];
-  $("#coChips").innerHTML = ind.companies.map(c => `<button class="chip cochip" aria-pressed="${!!vis[c.id]}" data-c="${c.id}"><span class="dot" style="background:var(${c.color})"></span>${esc(c.short)}</button>`).join("");
-
-  renderShare(); renderTable(); renderChart(); renderNet();
+  $("#coChips").innerHTML = ind.companies.map(c => `<button class="chip cochip" aria-pressed="${indState.sel === c.id}" data-c="${c.id}"><span class="dot" style="background:var(${c.color})"></span>${esc(c.short)}</button>`).join("");
+  indState.netSel = indState.sel;
+  renderShare(); renderTable(); renderChart(); renderProfile(); renderNet();
 }
 $("#indNav").addEventListener("click", e => { const b = e.target.closest("[data-i]"); if (b) { selectIndustry(b.dataset.i); b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); } });
 $("#metricSeg").addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b) return; indState.metric = b.dataset.m; $$("#metricSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderTable(); renderChart(); });
-$("#coChips").addEventListener("click", e => {
-  const b = e.target.closest("[data-c]"); if (!b) return;
-  const vis = indState.visible[curInd().id];
-  const on = Object.values(vis).filter(Boolean).length;
-  if (vis[b.dataset.c] && on === 1) return toast("1社以上を表示してください");
-  vis[b.dataset.c] = !vis[b.dataset.c]; b.setAttribute("aria-pressed", vis[b.dataset.c]);
-  renderChart();
-});
+$("#coChips").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) selectCompany(b.dataset.c); });
+$("#finTable").addEventListener("click", e => { const r = e.target.closest("tr[data-c]"); if (r) selectCompany(r.dataset.c); });
 
 const crosshair = {
   id: "crosshair",
@@ -1454,29 +1361,29 @@ const crosshair = {
     c.beginPath(); c.moveTo(x, top); c.lineTo(x, bottom); c.stroke(); c.restore();
   }
 };
+function withAlpha(hex, a) {
+  const m = hex.replace("#", ""); if (m.length !== 6) return hex;
+  return `rgba(${parseInt(m.slice(0, 2), 16)},${parseInt(m.slice(2, 4), 16)},${parseInt(m.slice(4), 16)},${a})`;
+}
 function renderChart() {
   const box = $(".chart-box");
-  if (typeof Chart === "undefined") {
-    box.innerHTML = `<div class="chart-fallback">グラフ用ライブラリを読み込めませんでした（オフライン等）。<br>下の表で数値を確認できます。</div>`;
-    return;
-  }
-  if ($("#view-industry").hidden) return;
-  const ind = curInd(), key = indState.metric, isPct = key === "margin";
-  const vis = indState.visible[ind.id];
+  if (typeof Chart === "undefined") { box.innerHTML = `<div class="chart-fallback">グラフ用ライブラリを読み込めませんでした（オフライン等）。<br>下の表で数値を確認できます。</div>`; return; }
+  if ($("#view-industry").hidden || indState.mode !== "deep") return;
+  const ind = curInd(), key = indState.metric, isPct = key === "margin", sel = indState.sel;
   const surface = css("--surface");
-  const ds = ind.companies.filter(c => vis[c.id]).map(c => {
-    const col = css(c.color);
-    return { label: c.short, data: series(ind, c, key), borderColor: col, backgroundColor: col, pointBackgroundColor: col, pointBorderColor: surface, pointBorderWidth: 2, borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, pointHitRadius: 14, tension: 0.25 };
+  const ds = ind.companies.map(c => {
+    const col = css(c.color), dim = sel && sel !== c.id, colr = dim ? withAlpha(col, .22) : col;
+    return { label: c.short, data: series(ind, c, key), borderColor: colr, backgroundColor: colr, pointBackgroundColor: colr, pointBorderColor: surface, pointBorderWidth: 2, borderWidth: sel === c.id ? 3.5 : 2, pointRadius: sel === c.id ? 5 : 4, pointHoverRadius: 6, pointHitRadius: 14, tension: 0.25, spanGaps: false, order: sel === c.id ? 0 : 1 };
   });
   const fmt = v => isPct ? v.toFixed(1) + "%" : fmtOku(v);
   const font = { family: "Archivo, Zen Kaku Gothic New, sans-serif", size: 11 };
   if (chart) chart.destroy();
   chart = new Chart($("#finChart"), {
     type: "line",
-    data: { labels: YEARS, datasets: ds },
+    data: { labels: D.yearLabels, datasets: ds },
     plugins: [crosshair],
     options: {
-      responsive: true, maintainAspectRatio: false, animation: { duration: 450 },
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
       interaction: { mode: "index", intersect: false },
       layout: { padding: { top: 6, right: 6 } },
       plugins: {
@@ -1484,6 +1391,7 @@ function renderChart() {
         tooltip: {
           backgroundColor: css("--ink"), titleColor: css("--bg"), bodyColor: css("--bg"), padding: 10, cornerRadius: 10,
           titleFont: { ...font, weight: "700" }, bodyFont: { family: font.family, size: 12 }, boxPadding: 4, usePointStyle: true,
+          filter: it => it.parsed.y != null,
           itemSort: (a, b) => b.parsed.y - a.parsed.y,
           callbacks: { label: c => ` ${c.dataset.label}  ${fmt(c.parsed.y)}` }
         }
@@ -1498,36 +1406,85 @@ function renderChart() {
 function renderTable() {
   const ind = curInd(), key = indState.metric, isPct = key === "margin";
   const m = metricsOf(ind).find(x => x.key === key);
-  const head = `<thead><tr><th>${esc(m.label)}${isPct ? "" : "（億円）"}</th>${YEARS.map(y => `<th>${y}</th>`).join("")}<th>5年の変化</th></tr></thead>`;
+  const head = `<thead><tr><th>${esc(m.label)}${isPct ? "" : "（億円）"}</th>${D.yearLabels.map(y => `<th>${y}</th>`).join("")}<th>変化</th></tr></thead>`;
   const rows = ind.companies.map(c => {
     const s = series(ind, c, key);
     const cells = s.map((v, i) => {
+      if (v == null) return `<td class="muted">—</td>`;
       const prev = s[i - 1];
       let y = "";
-      if (i > 0) {
+      if (i > 0 && prev != null) {
         if (isPct) { const d = v - prev; y = `<span class="yoy ${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}pt</span>`; }
-        else if (prev > 0) { const g = (v - prev) / prev * 100; y = `<span class="yoy ${g >= 0 ? "up" : "down"}">${pct(g)}</span>`; }
-        else y = `<span class="yoy muted">${v > 0 ? "黒字化" : "—"}</span>`;
+        else { const t = yoyText(prev, v); y = `<span class="yoy ${t.cls}">${t.t}</span>`; }
       }
       return `<td>${isPct ? v.toFixed(1) + "%" : (v < 0 ? "−" : "") + Math.abs(Math.round(v)).toLocaleString("ja-JP")}${y}</td>`;
     }).join("");
-    let ch;
-    if (isPct) { const d = s[4] - s[0]; ch = `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}pt</span>`; }
-    else if (s[0] > 0) { const g = (s[4] / s[0] - 1) * 100; ch = `<span class="${g >= 0 ? "up" : "down"}">${pct(g, 0)}</span>`; }
-    else ch = `<span class="muted">赤字から黒字</span>`;
-    return `<tr><td><span class="dot" style="background:var(${c.color})"></span>${esc(c.short)}</td>${cells}<td>${ch}</td></tr>`;
+    const first = s.findIndex(v => v != null), lastV = s[LAST];
+    let ch = `<span class="muted">—</span>`;
+    if (first >= 0 && first < LAST && lastV != null) {
+      if (isPct) { const d = lastV - s[first]; ch = `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}pt</span>`; }
+      else if (s[first] > 0) { const g = (lastV / s[first] - 1) * 100; ch = `<span class="${g >= 0 ? "up" : "down"}">${pct(g, 0)}</span>`; }
+      else ch = `<span class="muted">${lastV > 0 ? "赤字から黒字" : "赤字"}</span>`;
+    }
+    return `<tr data-c="${c.id}" class="${indState.sel === c.id ? "sel" : ""}"><td><span class="dot" style="background:var(${c.color})"></span>${esc(c.short)}</td>${cells}<td>${ch}</td></tr>`;
   }).join("");
-  $("#finTable").innerHTML = head + `<tbody>${rows}</tbody><caption class="note" style="caption-side:bottom;text-align:left;padding:8px 2px">${esc(ind.note)}</caption>`;
+  $("#finTable").innerHTML = head + `<tbody>${rows}</tbody>`;
 }
 function renderShare() {
   const ind = curInd(), k = ind.sizeKey;
-  const tot = ind.companies.reduce((s, c) => s + latest(c[k]), 0);
-  const tot0 = ind.companies.reduce((s, c) => s + Math.max(0, c[k][0]), 0);
-  $("#shareNote").textContent = `主要${ind.companies.length}社の${ind.labels[k]}（FY2024）に占める割合`;
-  $("#share").innerHTML = ind.companies.slice().sort((a, b) => latest(b[k]) - latest(a[k])).map(c => {
-    const p = latest(c[k]) / tot * 100, p0 = Math.max(0, c[k][0]) / tot0 * 100, d = p - p0;
-    return `<div class="share-row" title="FY2020比 ${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}pt"><span class="n">${esc(c.short)}</span><span class="track"><span class="bar" style="display:block;width:${p.toFixed(1)}%;background:var(${c.color})"></span></span><span class="p num">${p.toFixed(1)}%</span></div>`;
-  }).join("") + `<p class="note">FY2020からの変化：${ind.companies.map(c => { const p = latest(c[k]) / tot * 100 - Math.max(0, c[k][0]) / tot0 * 100; return `${esc(c.short)} ${p >= 0 ? "+" : "−"}${Math.abs(p).toFixed(1)}pt`; }).join("／")}</p>`;
+  const rows = ind.companies.filter(c => c[k][LAST] != null && c[k][LAST] > 0);
+  const tot = rows.reduce((s, c) => s + c[k][LAST], 0);
+  $("#shareNote").textContent = `主要${rows.length}社の${ind.labels[k]}（FY2025）に占める割合`;
+  $("#share").innerHTML = rows.slice().sort((a, b) => b[k][LAST] - a[k][LAST]).map(c => {
+    const p = c[k][LAST] / tot * 100;
+    return `<button class="share-row" data-c="${c.id}"><span class="n">${esc(c.short)}</span><span class="track"><span class="bar" style="width:${p.toFixed(1)}%;background:var(${c.color})"></span></span><span class="p num">${p.toFixed(1)}%</span></button>`;
+  }).join("");
+}
+$("#share").addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) selectCompany(b.dataset.c); });
+
+function linksHTML(code, name) {
+  if (!code) return "";
+  const q = encodeURIComponent(name + " IR 決算");
+  return `<div class="pf-links">
+    <a href="https://kabutan.jp/stock/?code=${encodeURIComponent(code)}" target="_blank" rel="noopener">株探 ${ic("ext", "ic ic-sm")}</a>
+    <a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(code)}.T" target="_blank" rel="noopener">Yahoo!ファイナンス ${ic("ext", "ic ic-sm")}</a>
+    <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener">IR資料を探す ${ic("ext", "ic ic-sm")}</a>
+    <a href="https://disclosure2.edinet-fsa.go.jp/" target="_blank" rel="noopener">EDINET ${ic("ext", "ic ic-sm")}</a>
+  </div>`;
+}
+function listedInfo(code) {
+  if (!LISTED || !code) return null;
+  const r = LISTED.list.find(x => x[0] === code); if (!r) return null;
+  const sector = (LISTED.sectors.find(s => s[0] === r[3]) || [])[1];
+  return { code: r[0], name: r[1], market: r[2], sector, sector17: r[4], scale: r[5] };
+}
+function curatedProfileHTML(ind, c, { closable = true } = {}) {
+  const pk = ind.profitKey, sk = ind.sizeKey;
+  const li = listedInfo(c.code);
+  const kpi = (label, arr) => { const v = arr[LAST], y = yoyText(arr[LAST - 1], v); return `<div><span>${esc(label)}</span><b>${fmtOku(v)}</b><i class="${y.cls}">前期比 ${y.t}</i></div>`; };
+  let third = "";
+  if (ind.metrics.includes("rev") && c.rev[LAST] && c[pk][LAST] != null) {
+    const m = c[pk][LAST] / c.rev[LAST] * 100, m0 = c.rev[LAST - 1] && c[pk][LAST - 1] != null ? c[pk][LAST - 1] / c.rev[LAST - 1] * 100 : null;
+    third = `<div><span>${esc(ind.labels[pk])}率</span><b>${m.toFixed(1)}%</b><i class="${m0 == null ? "muted" : m >= m0 ? "up" : "down"}">${m0 == null ? "前期 —" : "前期 " + m0.toFixed(1) + "%"}</i></div>`;
+  }
+  const rel = ind.edges.filter(e => e[1] === c.id || e[2] === c.id);
+  const nameOf = id => (ind.companies.find(x => x.id === id) || {}).short || ((ind.ext.find(x => x[0] === id) || [])[1]) || id;
+  return `<div class="profile">
+    <div class="pf-top"><span class="logo">${esc(c.short.slice(0, 1))}</span><div><b>${esc(c.name)}</b><span>${esc([c.code, li && li.market, ind.name, c.hq].filter(Boolean).join(" · "))}</span></div>
+      ${closable ? `<button class="x" id="pfClose" aria-label="説明を閉じる">${ic("x", "ic ic-sm")}</button>` : ""}</div>
+    <p>${esc(c.desc)}</p>
+    <div class="pf-point"><b>ここに注目</b><p>${esc(c.point)}</p></div>
+    <div class="pf-kpis">${kpi(ind.labels[sk] + "（" + c.fy + "）", c[sk])}${ind.metrics.length > 1 ? kpi(ind.labels[pk], c[pk]) : ""}${third}</div>
+    ${rel.length ? `<ul>${rel.map(([t, a, b, txt]) => `<li><span class="tag">${EDGE_TYPES[t]}</span><span><b>${esc(nameOf(a === c.id ? b : a))}</b>：${esc(txt)}</span></li>`).join("")}</ul>` : ""}
+    ${linksHTML(c.code, c.name)}
+  </div>`;
+}
+function renderProfile() {
+  const ind = curInd(), c = ind.companies.find(x => x.id === indState.sel);
+  const box = $("#coDetail");
+  if (!c) { box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="section" style="margin-top:14px">${curatedProfileHTML(ind, c)}</div>`;
+  $("#pfClose").addEventListener("click", () => selectCompany(c.id));
 }
 
 // --- correlation network: deterministic force layout ---
@@ -1538,9 +1495,9 @@ function netLayout(ind, W, H) {
     ...ind.companies.map(c => ({ id: c.id, label: c.short, co: c })),
     ...ind.ext.map(([id, label]) => ({ id, label, co: null }))
   ];
-  const maxV = Math.max(...ind.companies.map(c => latest(c[ind.sizeKey])));
+  const maxV = Math.max(...ind.companies.map(c => Math.max(0, lastVal(c[ind.sizeKey]) || 0)));
   nodes.forEach((n, i) => {
-    n.r = n.co ? 12 + 16 * Math.sqrt(Math.max(0, latest(n.co[ind.sizeKey])) / maxV) : 8;
+    n.r = n.co ? 12 + 16 * Math.sqrt(Math.max(0, lastVal(n.co[ind.sizeKey]) || 0) / (maxV || 1)) : 8;
     const a = (i / nodes.length) * Math.PI * 2 + (n.co ? 0 : 0.3);
     const rad = n.co ? 70 : 140;
     n.x = W / 2 + Math.cos(a) * rad; n.y = H / 2 + Math.sin(a) * rad * 0.8;
@@ -1576,15 +1533,13 @@ function netLayout(ind, W, H) {
 function renderNet() {
   const ind = curInd(), W = 400, H = 340;
   const { nodes, idx } = netLayout(ind, W, H);
-  const sel = indState.sel && idx[indState.sel] != null ? indState.sel : null;
+  const sel = indState.netSel && idx[indState.netSel] != null ? indState.netSel : null;
   const on = indState.edgeOn;
   const related = new Set(sel ? [sel] : []);
   const edges = ind.edges.filter(e => idx[e[1]] != null && idx[e[2]] != null);
   edges.forEach(([t, a, b]) => { if (sel && on[t] && (a === sel || b === sel)) { related.add(a); related.add(b); } });
   const usedTypes = [...new Set(edges.map(e => e[0]))];
-
-  $("#netLegend").innerHTML = usedTypes.map(t => `<button class="chip" aria-pressed="${on[t]}" data-et="${t}"><svg viewBox="0 0 26 10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" class="edge ${t}" style="stroke:${t === "comp" ? "var(--ink-3)" : "currentColor"};stroke-width:${t === "cap" ? 2.4 : t === "ally" ? 2 : 1.6};stroke-dasharray:${t === "ally" ? "6 3" : t === "supply" ? "1.5 3" : t === "comp" ? "3 3" : "none"};stroke-linecap:round"/></svg>${EDGE_TYPES[t]}</button>`).join("");
-
+  $("#netLegend").innerHTML = usedTypes.map(t => `<button class="chip" aria-pressed="${on[t]}" data-et="${t}"><svg viewBox="0 0 26 10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" style="stroke:${t === "comp" ? "var(--ink-3)" : "currentColor"};stroke-width:${t === "cap" ? 2.4 : t === "ally" ? 2 : 1.6};stroke-dasharray:${t === "ally" ? "6 3" : t === "supply" ? "1.5 3" : t === "comp" ? "3 3" : "none"};stroke-linecap:round"/></svg>${EDGE_TYPES[t]}</button>`).join("");
   const ed = edges.filter(e => on[e[0]]).map(([t, a, b]) => {
     const A = nodes[idx[a]], B = nodes[idx[b]];
     const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1;
@@ -1601,34 +1556,28 @@ function renderNet() {
       <text x="${n.x.toFixed(1)}" y="${(n.y + n.r + 13).toFixed(1)}">${esc(n.label)}</text></g>`;
   }).join("");
   $("#netSvg").innerHTML = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker></defs>${ed}${nd}`;
-
-  // detail panel
   if (!sel) {
     $("#netDetail").innerHTML = `<h4>${esc(ind.name)}の関係図</h4><span class="muted">色つきの円は決算データがある企業（大きさ＝${esc(ind.labels[ind.sizeKey])}）、白い円は関連企業です。タップすると関係が表示されます。</span>`;
   } else {
     const n = nodes[idx[sel]];
     const rel = edges.filter(e => e[1] === sel || e[2] === sel);
-    const head = n.co
-      ? `<h4>${esc(n.co.name)}</h4><span class="muted">${esc(ind.labels[ind.sizeKey])} ${fmtOku(latest(n.co[ind.sizeKey]))}（FY2024）／${esc(ind.labels[ind.profitKey])} ${fmtOku(latest(n.co[ind.profitKey]))}</span>`
-      : `<h4>${esc(n.label)}</h4><span class="muted">関連企業（この業界の決算データ対象外）</span>`;
-    $("#netDetail").innerHTML = head + `<ul>${rel.map(([t, a, b, txt]) => {
-      const other = nodes[idx[a === sel ? b : a]].label;
-      return `<li><span class="tag">${EDGE_TYPES[t]}</span><span><b>${esc(other)}</b>：${esc(txt)}</span></li>`;
-    }).join("")}</ul>${n.co ? `<button class="link" id="netFocus">グラフでこの企業だけを見る ${ic("arrow", "ic ic-sm")}</button>` : ""}`;
-    const f = $("#netFocus"); if (f) f.addEventListener("click", () => {
-      const vis = indState.visible[ind.id]; Object.keys(vis).forEach(k2 => vis[k2] = k2 === sel);
-      renderIndustry(); $("#finChart").scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    $("#netDetail").innerHTML = `<h4>${esc(n.co ? n.co.name : n.label)}</h4>${n.co ? `<span class="muted">企業の説明は「過去5年の決算」のグラフの下に表示しています</span>` : `<span class="muted">関連企業（この業界の決算データ対象外）</span>`}
+      <ul>${rel.map(([t, a, b, txt]) => `<li><span class="tag">${EDGE_TYPES[t]}</span><span><b>${esc(nodes[idx[a === sel ? b : a]].label)}</b>：${esc(txt)}</span></li>`).join("")}</ul>`;
   }
+}
+function netPick(id) {
+  const ind = curInd();
+  if (ind.companies.some(c => c.id === id)) { selectCompany(id); return; }
+  indState.netSel = indState.netSel === id ? null : id; renderNet();
 }
 $("#netSvg").addEventListener("click", e => {
   const g = e.target.closest("[data-n]");
-  indState.sel = g && indState.sel !== g.dataset.n ? g.dataset.n : null; renderNet();
+  if (g) netPick(g.dataset.n); else { indState.netSel = null; renderNet(); }
 });
 $("#netSvg").addEventListener("keydown", e => {
   if (e.key !== "Enter" && e.key !== " ") return;
   const g = e.target.closest("[data-n]"); if (!g) return; e.preventDefault();
-  indState.sel = indState.sel !== g.dataset.n ? g.dataset.n : null; renderNet();
+  netPick(g.dataset.n);
   const again = $(`[data-n="${g.dataset.n}"]`); again && again.focus();
 });
 $("#netLegend").addEventListener("click", e => {
@@ -1636,7 +1585,127 @@ $("#netLegend").addEventListener("click", e => {
   indState.edgeOn[b.dataset.et] = !indState.edgeOn[b.dataset.et]; renderNet();
 });
 
+/* --- all listed companies --- */
+let allState = { sector: null, market: "all", shown: 120 };
+const MARKETS = ["プライム", "スタンダード", "グロース"];
+function sectorName(code) { return (LISTED.sectors.find(s => s[0] === code) || [])[1] || ""; }
+function rowHTML(r, withSector) {
+  const cur = CURATED_BY_CODE[r[0]];
+  return `<button class="co-row" data-code="${esc(r[0])}"><span class="code">${esc(r[0])}</span><span class="nm">${esc(r[1])}${cur ? `<span class="star">決算あり</span>` : ""}<small>${esc(withSector && LISTED ? sectorName(r[3]) + (r[5] ? " · " : "") : "")}${esc(r[5] || "")}</small></span><span class="mk">${esc(r[2])}</span></button>`;
+}
+function renderAll() {
+  const body = $("#allBody");
+  if (!LISTED) {
+    body.innerHTML = `<div class="section"><div class="empty">全上場企業の一覧はまだ取得されていません。GitHub Actions（Update data）が日本取引所グループの公開データから毎朝作成します。</div></div>`;
+    return;
+  }
+  if (!allState.sector) {
+    const counts = {}; LISTED.list.forEach(r => counts[r[3]] = (counts[r[3]] || 0) + 1);
+    body.innerHTML = `<div class="section">
+      <div class="section-head"><h2 class="h2">33業種から探す</h2><span class="note">東証の業種分類 · ${esc(fmtDate(LISTED.asOf))}時点</span></div>
+      <div class="sector-grid">${LISTED.sectors.slice().sort((a, b) => counts[b[0]] - counts[a[0]]).map(([code, name]) => {
+        const deep = (SECTOR_TO_IND[name] || []).map(id => findInd(id).name);
+        return `<button class="sector" data-sector="${code}"><b>${esc(name)}</b><span><span class="num">${(counts[code] || 0).toLocaleString("ja-JP")}</span> 社</span>${deep.length ? `<span class="deep">詳しく：${esc(deep.join("・"))}</span>` : ""}</button>`;
+      }).join("")}</div>
+      <p class="note">出典：${esc(LISTED.source)}（ETF・REITなどを除く）。業界地図などの細かい業界分類は出版社独自のものなので、ここでは東証の33業種を使い、主要な業界は「詳しく見る」で掘り下げています。</p>
+    </div>`;
+    return;
+  }
+  const name = sectorName(allState.sector);
+  const list = LISTED.list.filter(r => r[3] === allState.sector && (allState.market === "all" || r[2] === allState.market));
+  const deep = SECTOR_TO_IND[name] || [];
+  body.innerHTML = `<div class="section">
+    <button class="link" id="backSectors" style="justify-self:start">← 33業種一覧に戻る</button>
+    <div class="section-head"><h2 class="h2">${esc(name)}</h2><span class="note">${list.length.toLocaleString("ja-JP")}社</span></div>
+    ${deep.length ? `<div class="chips">${deep.map(id => `<button class="chip" data-deep="${id}">${esc(findInd(id).name)}を詳しく見る ${ic("arrow", "ic ic-sm")}</button>`).join("")}</div>` : ""}
+    <div class="chips">${["all", ...MARKETS].map(m => `<button class="chip" aria-pressed="${allState.market === m}" data-mk="${m}">${m === "all" ? "すべての市場" : m}</button>`).join("")}</div>
+    <div class="co-rows">${list.slice(0, allState.shown).map(r => rowHTML(r, false)).join("") || `<div class="empty">該当する企業はありません</div>`}</div>
+    ${list.length > allState.shown ? `<button class="btn ghost sm" id="allMore">さらに表示（残り${(list.length - allState.shown).toLocaleString("ja-JP")}社）</button>` : ""}
+  </div>`;
+}
+$("#allBody").addEventListener("click", e => {
+  const s = e.target.closest("[data-sector]"); if (s) { allState.sector = s.dataset.sector; allState.market = "all"; allState.shown = 120; renderAll(); window.scrollTo({ top: $("#allBody").getBoundingClientRect().top + window.scrollY - 20 }); return; }
+  if (e.target.closest("#backSectors")) { allState.sector = null; renderAll(); return; }
+  const m = e.target.closest("[data-mk]"); if (m) { allState.market = m.dataset.mk; allState.shown = 120; renderAll(); return; }
+  if (e.target.closest("#allMore")) { allState.shown += 200; renderAll(); return; }
+  const d = e.target.closest("[data-deep]"); if (d) { setMode("deep"); selectIndustry(d.dataset.deep); window.scrollTo({ top: 0 }); return; }
+  const r = e.target.closest("[data-code]"); if (r) openListedCompany(r.dataset.code);
+});
+function openListedCompany(code) {
+  const cur = CURATED_BY_CODE[code];
+  if (cur) {
+    const ind = findInd(cur.ind);
+    openSheet(`<span class="grabber" aria-hidden="true"></span><div class="sheet-head"><span class="eyebrow">企業の説明</span><button data-close aria-label="閉じる">${ic("x")}</button></div>
+      ${curatedProfileHTML(ind, cur, { closable: false })}
+      <button class="btn" id="goDeep" style="width:100%;margin-top:14px">${esc(ind.name)}業界で比較する ${ic("arrow", "ic ic-sm")}</button>`, root => {
+      $("#goDeep", root).addEventListener("click", () => { closeSheet(); go("industry"); setMode("deep"); selectIndustry(ind.id, cur.id); });
+    });
+    return;
+  }
+  const li = listedInfo(code); if (!li) return;
+  const deep = SECTOR_TO_IND[li.sector] || [];
+  openSheet(`<span class="grabber" aria-hidden="true"></span><div class="sheet-head"><span class="eyebrow">企業の説明</span><button data-close aria-label="閉じる">${ic("x")}</button></div>
+    <div class="profile">
+      <div class="pf-top"><span class="logo">${esc(li.name.slice(0, 1))}</span><div><b>${esc(li.name)}</b><span>証券コード ${esc(li.code)}</span></div></div>
+      <dl class="pf-meta"><dt>市場</dt><dd>${esc(li.market)}</dd><dt>業種（33）</dt><dd>${esc(li.sector)}</dd><dt>業種（17）</dt><dd>${esc(li.sector17)}</dd>${li.scale ? `<dt>規模</dt><dd>${esc(li.scale)}</dd>` : ""}</dl>
+      <p>この企業の事業内容と決算データは、EDINET連携で今後自動追加する予定です。それまでは下のリンクから一次情報を確認できます。</p>
+      ${linksHTML(li.code, li.name)}
+      ${deep.length ? `<div class="chips">${deep.map(id => `<button class="chip" data-deep2="${id}">同じ業種の「${esc(findInd(id).name)}」を詳しく見る</button>`).join("")}</div>` : ""}
+    </div>`, root => {
+    $$("[data-deep2]", root).forEach(b => b.addEventListener("click", () => { closeSheet(); go("industry"); setMode("deep"); selectIndustry(b.dataset.deep2); window.scrollTo({ top: 0 }); }));
+  });
+}
+// search across all listed companies
+function normq(s) { return String(s).normalize("NFKC").toLowerCase().replace(/[\s・()（）]/g, "").replace(/[ァ-ン]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)); }
+let searchIndex = null;
+function doSearch(q) {
+  const box = $("#searchResults");
+  q = q.trim();
+  if (!q) { box.hidden = true; box.innerHTML = ""; return; }
+  const nq = normq(q);
+  let hits = [];
+  if (LISTED) {
+    searchIndex = searchIndex || LISTED.list.map(r => [normq(r[1]), r]);
+    hits = searchIndex.filter(([n, r]) => r[0].toLowerCase().startsWith(nq) || n.includes(nq)).map(x => x[1]);
+    hits.sort((a, b) => (normq(a[1]).startsWith(nq) ? 0 : 1) - (normq(b[1]).startsWith(nq) ? 0 : 1) || (CURATED_BY_CODE[b[0]] ? 1 : 0) - (CURATED_BY_CODE[a[0]] ? 1 : 0));
+  } else {
+    INDUSTRIES.forEach(ind => ind.companies.forEach(c => { if (normq(c.name).includes(nq) || normq(c.short).includes(nq) || (c.code || "").startsWith(nq)) hits.push([c.code, c.name, "", "", "", ""]); }));
+  }
+  box.hidden = false;
+  box.innerHTML = `<div class="section-head"><h2 class="h2">検索結果</h2><span class="note">${hits.length.toLocaleString("ja-JP")}件</span></div>
+    <div class="co-rows">${hits.slice(0, 30).map(r => rowHTML(r, true)).join("") || `<div class="empty">「${esc(q)}」に一致する企業はありません</div>`}</div>`;
+}
+let searchTimer;
+$("#coSearch").addEventListener("input", e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => doSearch(e.target.value), 120); });
+$("#searchResults").addEventListener("click", e => { const r = e.target.closest("[data-code]"); if (r) openListedCompany(r.dataset.code); });
+
 /* ============ REGION ============ */
+const REGIONS = [
+  { id: "ht", name: "北海道・東北", prefs: ["北海道", "青森", "秋田", "岩手", "山形", "宮城", "福島"] },
+  { id: "kt", name: "関東", prefs: ["茨城", "栃木", "群馬", "埼玉", "千葉", "東京", "神奈川"] },
+  { id: "hk", name: "北陸・甲信越", prefs: ["新潟", "富山", "石川", "福井", "山梨", "長野"] },
+  { id: "tk", name: "東海", prefs: ["岐阜", "静岡", "愛知", "三重"] },
+  { id: "kk", name: "近畿", prefs: ["滋賀", "京都", "大阪", "兵庫", "奈良", "和歌山"] },
+  { id: "cs", name: "中国・四国", prefs: ["鳥取", "島根", "岡山", "広島", "山口", "徳島", "香川", "愛媛", "高知"] },
+  { id: "ko", name: "九州・沖縄", prefs: ["福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"] }
+];
+const TILES = [
+  ["北海道", 11, 0, 2], ["青森", 11, 2], ["秋田", 10, 3], ["岩手", 11, 3], ["山形", 10, 4], ["宮城", 11, 4],
+  ["石川", 8, 5], ["富山", 9, 5], ["新潟", 10, 5], ["福島", 11, 5],
+  ["島根", 3, 6], ["鳥取", 4, 6], ["兵庫", 5, 6], ["京都", 6, 6], ["福井", 7, 6], ["岐阜", 8, 6], ["長野", 9, 6], ["群馬", 10, 6], ["栃木", 11, 6],
+  ["佐賀", 0, 7], ["福岡", 1, 7], ["山口", 2, 7], ["広島", 3, 7], ["岡山", 4, 7], ["大阪", 5, 7], ["滋賀", 6, 7], ["三重", 7, 7], ["愛知", 8, 7], ["山梨", 9, 7], ["埼玉", 10, 7], ["茨城", 11, 7],
+  ["長崎", 0, 8], ["熊本", 1, 8], ["大分", 2, 8], ["愛媛", 3, 8], ["香川", 4, 8], ["和歌山", 5, 8], ["奈良", 6, 8], ["静岡", 9, 8], ["東京", 10, 8], ["千葉", 11, 8],
+  ["鹿児島", 1, 9], ["宮崎", 2, 9], ["高知", 3, 9], ["徳島", 4, 9], ["神奈川", 10, 9],
+  ["沖縄", 0, 11]
+];
+const REGION_COS = D.regionCos;
+// fill the latest numbers from the industry data so the two screens never disagree
+Object.values(REGION_COS).flat().forEach(c => {
+  if (!c.link) return;
+  const ind = findInd(c.link[0]), co = ind && ind.companies.find(x => x.id === c.link[1]);
+  if (!co) return;
+  c.rev = lastVal(co[ind.sizeKey]); c.revLabel = ind.labels[ind.sizeKey]; c.fy = co.fy; c.code = co.code;
+});
 let regState = store.get("region", "tk");
 function renderMap() {
   const cs = 31, size = 28;
@@ -1657,30 +1726,31 @@ function renderMap() {
     `<text class="rlabel" x="2" y="34" style="font-size:24px">${esc(sel.name)}</text>` +
     `<text x="2" y="58" style="font-size:12px;fill:var(--ink-3)">${(REGION_COS[sel.id] || []).length}社を掲載</text>` +
     `<circle cx="${2 * cs + 4}" cy="${11 * cs + 14}" r="3" fill="var(--ink)"/><text x="${2 * cs + 13}" y="${11 * cs + 14}" style="font-size:11px;fill:var(--ink-3);dominant-baseline:central">掲載企業の本社がある都道府県</text>`;
-  $("#regChips").innerHTML = REGIONS.map(r => `<button class="chip" aria-pressed="${r.id === regState}" data-r="${r.id}">${esc(r.name)}<span class="muted num" style="font-weight:500">${(REGION_COS[r.id] || []).length}</span></button>`).join("");
+  $("#regChips").innerHTML = REGIONS.map(r => `<button class="chip" aria-pressed="${r.id === regState}" data-r="${r.id}">${esc(r.name)}<span class="cnt">${(REGION_COS[r.id] || []).length}</span></button>`).join("");
 }
 function renderRegionList() {
   const r = REGIONS.find(x => x.id === regState), list = REGION_COS[r.id] || [];
   $("#regName").textContent = r.name + "に本社がある企業";
   $("#regCount").textContent = `${list.length}社`;
+  const suffix = p => p === "北海道" ? "" : p === "東京" ? "都" : ["大阪", "京都"].includes(p) ? "府" : "県";
   $("#coList").innerHTML = list.map((c, i) => `<article class="co" style="animation-delay:${i * 40}ms">
-    <div class="co-top"><span class="logo">${esc(c.name.slice(0, 1))}</span><div><b>${esc(c.name)}</b><span>${esc(c.biz)}</span></div></div>
+    <div class="co-top"><span class="logo">${esc(c.name.slice(0, 1))}</span><div><b>${esc(c.name)}</b><span>${esc(c.biz)}${c.code ? " · " + esc(c.code) : ""}</span></div></div>
     <dl>
-      <dt>本社</dt><dd>${esc(c.pref === "北海道" ? "北海道" : c.pref + (c.pref === "東京" ? "都" : ["大阪", "京都"].includes(c.pref) ? "府" : "県"))}${esc(c.city)}</dd>
-      <dt>${esc(c.revLabel || "売上高等")}</dt><dd class="big">${c.rev == null ? '<span class="muted" style="font-size:14px">今後追加予定</span>' : "約" + fmtOku(c.rev)}</dd>
+      <dt>本社</dt><dd>${esc(c.pref + suffix(c.pref))}${esc(c.city)}</dd>
+      <dt>${esc(c.revLabel || "売上高")}</dt><dd class="big">${c.rev == null ? '<span class="muted" style="font-size:14px">今後追加予定</span>' : "約" + fmtOku(c.rev)}</dd>
       <dt>決算期</dt><dd>${esc(c.fy)}</dd>
     </dl>
     <p>${esc(c.desc)}</p>
-    ${c.link ? `<button class="go" data-link="${c.link[0]}:${c.link[1]}">${esc(findInd(c.link[0]).name)}業界で比較 ${ic("arrow", "ic ic-sm")}</button>` : ""}
+    ${c.link ? `<button class="go" data-link="${c.link[0]}:${c.link[1]}">${esc(findInd(c.link[0]).name)}業界で比較 ${ic("arrow", "ic ic-sm")}</button>` : c.code ? `<button class="go" data-code="${esc(c.code)}">企業の説明を見る ${ic("arrow", "ic ic-sm")}</button>` : ""}
   </article>`).join("");
 }
 function selectRegion(id) { regState = id; store.set("region", id); renderMap(); renderRegionList(); }
 $("#jpMap").addEventListener("click", e => { const g = e.target.closest("[data-r]"); if (g) selectRegion(g.dataset.r); });
 $("#regChips").addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (b) selectRegion(b.dataset.r); });
 $("#coList").addEventListener("click", e => {
-  const b = e.target.closest("[data-link]"); if (!b) return;
-  const [i, c] = b.dataset.link.split(":"); selectIndustry(i, c); go("industry");
-  setTimeout(() => $("#netSvg").scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  const b = e.target.closest("[data-link]");
+  if (b) { const [i, c] = b.dataset.link.split(":"); go("industry"); setMode("deep"); selectIndustry(i, c); return; }
+  const k = e.target.closest("[data-code]"); if (k) openListedCompany(k.dataset.code);
 });
 
 /* ============ theme changes → redraw chart colors ============ */
@@ -1693,7 +1763,9 @@ hydrateIcons();
 renderHome();
 renderMenu();
 renderStories();
+renderNews();
 renderFeed();
+setMode("deep");
 renderIndustry();
 renderMap();
 renderRegionList();

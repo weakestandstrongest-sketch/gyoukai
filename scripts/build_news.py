@@ -110,6 +110,7 @@ def main():
             if not it["t"] or key in seen:
                 continue
             seen.add(key)
+            it["main"] = ind_id
             items.append(it)
 
     out = []
@@ -126,19 +127,20 @@ def main():
             impact.setdefault(i, "~")
         if not impact:
             continue
+        impact.setdefault(it["main"], "~")
         events = [w for w in EVENT_WORDS if w in t]
         trusted = any(n in it["src"] or n in t[-12:] for n in TRUSTED)
         score = len(events) * 2 + len(themes) * 2 + min(len(inds), 3) + (3 if trusted else 0)
         out.append({
             "t": t, "src": it["src"], "url": it["url"],
             "at": it["at"].astimezone(JST).isoformat(timespec="minutes"),
-            "inds": list(impact.keys()), "impact": impact, "themes": themes, "events": events, "score": score,
+            "main": it["main"], "inds": list(impact.keys()), "impact": impact, "themes": themes, "events": events, "score": score,
         })
 
     out.sort(key=lambda x: (x["score"], x["at"]), reverse=True)
     picked, per = [], {}
     for it in out:
-        main_ind = it["inds"][0]
+        main_ind = it["main"]
         if per.get(main_ind, 0) >= PER_INDUSTRY:
             continue
         per[main_ind] = per.get(main_ind, 0) + 1
